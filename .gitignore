@@ -16,3 +16,5 @@ depccg.egg-info
 .idea
 .vscode
 memo
+.DS_Store
+dist
