@@ -35,7 +35,7 @@ class VerbListCreator(object):
                 self._traverse(children[1])
                 if children[0].cat.is_atomic and children[0].cat.base == 'NP' and children[1].cat.is_functor: # if left is NP and right is a functor
                     s = str(children[1].cat)
-                    if re.match(r'(\(*)S', s) is not None:  # if right starts with S, that is, right is VP
+                    if re.match(r'(\(*)S', s) is not None and s.count('S') == 1:  # if right starts with 'S' and right has only one 'S', that is, right is a VP
                         combination = str(children[0].cat), str(children[1].cat)
                         self.verb_list[combination] += 1
     
