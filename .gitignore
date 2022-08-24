@@ -18,3 +18,5 @@ depccg.egg-info
 memo
 .DS_Store
 dist
+.ipynb
+BCCWJparse.py
