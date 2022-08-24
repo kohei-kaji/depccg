@@ -4,9 +4,10 @@
 import argparse
 import logging
 from pathlib import Path
+from typing import Dict
 # import json
 
-from depccg.cat import Category
+from depccg.cat import Category, Functor
 from depccg.unification import Unification
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
@@ -17,10 +18,26 @@ class MakeTypeRaiseDict(object):
     def __init__(self, filepath: str):
         self.filepath = filepath
         self.dict = {}
+        self.one_arg = r"S[mod=X1,form=X2,fin=X3]/(S[mod=X1,form=X2,fin=X3]\NP[case=X1,mod=X2,fin=X3])"
+        self.two_args = r"(S[mod=X1,form=X2,fin=X3]\NP[case=X1,mod=X2,fin=X3])/((S[mod=X1,form=X2,fin=X3]\NP[case=X1,mod=X2,fin=X3])\NP[case=X1,mod=X2,fin=X3])"
+        self.three_args = r"((S[mod=X1,form=X2,fin=X3]\NP[case=X1,mod=X2,fin=X3])\NP[case=X1,mod=X2,fin=X3])/(((S[mod=X1,form=X2,fin=X3]\NP[case=X1,mod=X2,fin=X3])\NP[case=X1,mod=X2,fin=X3])\NP[case=X1,mod=X2,fin=X3])"
+        self.four_args = r"(((S[mod=X1,form=X2,fin=X3]\NP[case=X1,mod=X2,fin=X3])\NP[case=X1,mod=X2,fin=X3])\NP[case=X1,mod=X2,fin=X3])/((((S[mod=X1,form=X2,fin=X3]\NP[case=X1,mod=X2,fin=X3])\NP[case=X1,mod=X2,fin=X3])\NP[case=X1,mod=X2,fin=X3])\NP[case=X1,mod=X2,fin=X3])"
     
-    def _typeraise(self, l: str, r: str):
+    def _typeraise(self, l: str, r: str) -> Dict[str, str]:
         left = Category.parse(l)
         right = Category.parse(r)
+    
+        if right.nargs == 1:
+            self.dict[r] = self.one_arg
+        elif right.nargs == 2:
+            self.dict[r] = self.two_args
+        elif right.nargs == 3:
+            self.dict[r] = self.three_args
+        elif right.nargs == 4:
+            self.dict[r] = self.four_args
+        else:
+            raise Exception
+        
         # 単純に考えると、
         # X -> T/(T\X) (>T)
         
@@ -36,10 +53,11 @@ class MakeTypeRaiseDict(object):
         # NP[case=ga] -> S[mod=X1,form=X2,fin=X3]/(S[mod=X1,form=X2,fin=X3]\NP[case=ga,mod=X1,fin=X2])
         # NP[case=o] -> (S[mod=X1,form=X2,fin=X3]\NP[case=X1,mod=X2,fin=X3])/(S[mod=X1,form=X2,fin=X3]\NP[case=X1,mod=X2,fin=X3]\NP[case=o,mod=X1,fin=X2])
         
-        T = str(right.left)
-        X = str(left)
-        typeraise = T + '/(' + T + '\\' + X + ')'
-        self.dict[typeraise] = X
+        # T = str(right.left)
+        # X = str(left)
+        # typeraise = T + '/(' + T + '\\' + X + ')'
+        # self.dict[typeraise] = X
+        
         # or
         # T = str(right.left)
         # X = str(right)
