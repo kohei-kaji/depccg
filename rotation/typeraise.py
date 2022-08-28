@@ -9,7 +9,7 @@
 
 import re
 import argparse
-from typing import Dict
+from typing import Dict, List
 from pathlib import Path
 
 from depccg.cat import Category, Atom, Functor
@@ -47,38 +47,69 @@ class ApplyTypeRaise(object):
             raise Exception
         
         
-    def _traverse(self, tree: Tree):
+    def _traverse(self, tree: Tree) -> None:
         if tree.is_leaf == False:
-            children = tree.children
-            if len(children) == 1:
-                self._traverse(children[0])
+            if len(tree.children) == 1:
+                self._traverse(tree.children[0])
             else:
-                left = children[0]
-                right = children[1]
+                left, right = tree.children
                 self._traverse(left)
                 self._traverse(right)
                 if left.cat.is_atomic and left.cat.base == 'NP' and right.cat.is_functor: # if left is NP and right is a functor
                     s = str(right.cat)
                     if re.match(r'(\(*)S', s) is not None and s.count('S') == 1:  # if right starts with S, that is, right is VP
-                        typeraise = self.apply_tr_rules(left, right)
-                        origin_cat = left.cat
-                        origin_children = left.children
-                        left.children = [Tree(origin_cat, origin_children, 'tr', '<tr>')]
-                        left.cat = typeraise
-                        tree.op_string = 'fa'
-                        tree.op_symbol = '>'
+                        
+                        np_cat = left.cat
+                        np_children = left.children
+                        np_op_string = left.op_string
+                        np_op_symbol = left.op_symbol
+                        
+                        tr_cat = self.apply_tr_rules(left.cat, right.cat)
+                        tr_children = [Tree(np_cat, np_children, np_op_string, np_op_symbol)]
+                        
+                        
+                        s_cat = tree.cat
+                        s_children = tree.children
+                        s_op_string = tree.op_string
+                        s_op_symbol = tree.op_symbol
+                        
+                        
+                        tree.left_child.children = [Tree(left.cat, left.children, left.op_string, left.op_symbol)]
+                        # tree.children = [Tree(tr_cat, [tree.left_child], 'tr', '>T'), right]
+                        # tree = Tree(tree.cat, tree.children, 'fa', '>')
+                        # tree.children = [Tree(tr_cat, tr_children, 'tr', '>T'), right]
+                        # tree = Tree(tree.cat, tree.children, 'fa', '>')
+                        # tree.op_string = 'fa'
+                        # tree.op_symbol = '>'
+                       
+                        # tree = Tree(tree_cat, [tree_left, right], 'fa', '>')
+                        # tree.children = [Tree(typeraise, origin_children, 'tr', '>T'), right]
+                        # tree.left_child.children = origin_children
+                        
+                        # tree.left_child.children = np_children
+                        # tree.children = [Tree(typeraise, origin_children, 'tr', '>T'), right]
+                        # tree = Tree(tree_cat, [tree_left, right], 'fa', '>')
+                                                         
+                        
+                        
+                        
+                        # tree.left_child.children: List[Tree] = [Tree(origin_cat, origin_children, origin_op_string, origin_op_symbol)]
+                        # tree.children: List[Tree] = [Tree(typeraise, tree.left_child.children, 'tr', '>T')]
+                        # # tree.op_string, tree.op_symbol = 'fa', '>'
+                        # tree = Tree(tree_cat, tree.children, 'fa', '>')
     
     @staticmethod
     def typeraise(args):
         self = ApplyTypeRaise(args.PATH)
-        self.readdict()  # 引数取らないようにしている。trdict.txt以外を参照して辞書を作る場合は、readdict関数を編集する必要あり。
+        self.readdict()
         
         parent = Path(self.filepath).parent
         textname = str(Path(self.filepath).stem) + '_typeraised'
         trees = [tree for _, _, tree in read_parsedtree(self.filepath)]
         with open(parent / textname, 'w') as f:
             for tree in trees:
-                f.write(ja_of(self._traverse(tree)))
+                self._traverse(tree)
+                f.write(ja_of(tree))
                 f.write('\n')
 
 
@@ -86,7 +117,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('PATH',
                         type=Path,
-                        help='path to the file of the Japanese CCG derivations')
+                        help='path to the file of the Japanese CCG derivations parsed by depccg')
     
     args = parser.parse_args()
     ApplyTypeRaise.typeraise(args)

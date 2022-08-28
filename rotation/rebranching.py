@@ -6,9 +6,32 @@ so punctuation rules (implemented in Rotating-CCG) does not need to be take into
 
 from depccg.tree import Tree
 
+# Japanese combinatory rules in ja.py
+# forward_application,
+# backward_application,
+# forward_composition,
+# generalized_backward_composition1,
+# generalized_backward_composition2,
+# generalized_backward_composition3,
+# generalized_backward_composition4,
+# generalized_forward_composition1,
+# generalized_forward_composition2,
+# generalized_forward_composition3,
+# conjoin
+
 class ApplyRightToLeft(object):
     def __init__(self, filepath: str):
         self.filepath = filepath
+        self.fa = '>'
+        self.ba = '<'
+        self.fc = '>B'
+        self.bc1 = '<B1'
+        self.bc2 = '<B2'
+        self.bc3 = '<B3'
+        self.bc4 = '<B4'
+        self.gfc1 = '>Bx1'
+        self.gfc2 = '>Bx2'
+        self.gfc3 = '>Bx3'
     
     def forwardrighttoleft(self, node: Tree):
         pass
