@@ -30,11 +30,11 @@ def read_parsedtree(filepath: str) -> Iterator[ReaderResult]:
         line = line.strip()
         if len(line) == 0:
             continue
-        tree, tokens = _ParsedJaCCGLineReader(line).parse()
+        tree, tokens = ParsedJaCCGLineReader(line).parse()
         yield ReaderResult(str(i), tokens, tree)
 
 
-class _ParsedJaCCGLineReader(object):
+class ParsedJaCCGLineReader(object):
     def __init__(self, line: str) -> None:
         self.line = line
         self.index = 0
