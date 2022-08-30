@@ -23,7 +23,7 @@ class ApplyTypeRaise(object):
         return self.tr_rules
     
     # X -> T/(T\X)
-    def apply_tr_rules(self, x: Atom, y:Functor) -> Functor:
+    def typeraise(self, x: Atom, y:Functor) -> Functor:
         # results = [result for result in self.tr_rules[x.base]
         # if Category.parse(result).right == y
         # and x == Category.parse(result).right.right]
@@ -41,15 +41,33 @@ class ApplyTypeRaise(object):
         if node.is_leaf:
             return Tree.make_terminal(node.token, node.cat)
         elif node.is_unary:
-            return Tree.make_unary(node.cat, self.apply_typeraise(node.child), node.op_string, node.op_symbol)
+            return Tree.make_unary(node.cat,
+                                   self.apply_typeraise(node.child),
+                                   node.op_string, node.op_symbol)
         elif node.left_child.cat.is_atomic and node.left_child.cat.base == 'NP' and node.right_child.cat.is_functor:
             s = str(node.right_child.cat)
             if re.match(r'(\(*)S', s) is not None and s.count('S') == 1:
-                return Tree.make_binary(node.cat, Tree.make_unary(self.apply_tr_rules(node.left_child.cat, node.right_child.cat), self.apply_typeraise(node.left_child), 'tr', '>T'), self.apply_typeraise(node.right_child), 'fa', '>')
+                return Tree.make_binary(node.cat,
+                                        Tree.make_unary(self.typeraise(node.left_child.cat,
+                                                                       node.right_child.cat),
+                                                        self.apply_typeraise(node.left_child),
+                                                        'tr',
+                                                        '>T'),
+                                        self.apply_typeraise(node.right_child),
+                                        'fa',
+                                        '>')
             else:
-                return Tree.make_binary(node.cat, self.apply_typeraise(node.left_child), self.apply_typeraise(node.right_child), node.op_string, node.op_symbol)
+                return Tree.make_binary(node.cat,
+                                        self.apply_typeraise(node.left_child),
+                                        self.apply_typeraise(node.right_child),
+                                        node.op_string,
+                                        node.op_symbol)
         else:
-            return Tree.make_binary(node.cat, self.apply_typeraise(node.left_child), self.apply_typeraise(node.right_child), node.op_string, node.op_symbol)
+            return Tree.make_binary(node.cat,
+                                    self.apply_typeraise(node.left_child),
+                                    self.apply_typeraise(node.right_child),
+                                    node.op_string,
+                                    node.op_symbol)
     
     
         
@@ -70,7 +88,7 @@ class ApplyTypeRaise(object):
                         np_op_string = left.op_string
                         np_op_symbol = left.op_symbol
                         
-                        tr_cat = self.apply_tr_rules(left.cat, right.cat)
+                        tr_cat = self.typeraise(left.cat, right.cat)
                         tr_children = [Tree(np_cat, np_children, np_op_string, np_op_symbol)]                        
                         
                         tree.left_child.children = [Tree(np_cat, np_children, np_op_string, np_op_symbol)]
@@ -90,7 +108,7 @@ class ApplyTypeRaise(object):
                         # tree = Tree(tree_cat, [tree_left, right], 'fa', '>')
 
     @staticmethod
-    def typeraise(args):
+    def create_typeraised_tree(args):
         self = ApplyTypeRaise(args.PATH)
         self.readdict()
         
@@ -111,7 +129,7 @@ if __name__ == '__main__':
                         help='path to the file of the Japanese CCG derivations parsed by depccg')
     
     args = parser.parse_args()
-    ApplyTypeRaise.typeraise(args)
+    ApplyTypeRaise.create_typeraised_tree(args)
                         
 
 
