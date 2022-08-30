@@ -1,15 +1,6 @@
-# (方針)
-# 1. Japanese CCGBankをTreeオブジェクトとして読み込む。
-# 2. top-node (S) から順に見ていき、NP S\NP -> S のように動詞句とcombineされているとき、NPにtype-raisingを適用する。
-#     - このとき、NPの上にS/(S\NP) nodeを作り、combinatorを変更する。
-#         - NPの下にmake_unary (S/(S\NP)) した上で、NPとS\NPのcombinatorを変更し、その上でNPとS/(S\NP)の位置を入れ替えればよい。
-#     - これをひとつの関数で実装し、再起的にleaf nodeまで探索する。(depccg/printerの再帰関数を参考)
-# 3. Treeオブジェクトを書き換えたら、文字列として出力する。
-#     - この際、html出力ができるようにすると、簡易的なチェックが可能。
-
 import re
 import argparse
-from typing import Dict, List
+from typing import Dict
 from pathlib import Path
 
 from depccg.cat import Category, Atom, Functor
@@ -19,9 +10,8 @@ from depccg.printer.ja import ja_of
 
 from reader import read_parsedtree
 
-
 class ApplyTypeRaise(object):
-    def __init__(self, filepath: str):
+    def __init__(self, filepath: str) -> None:
         self.filepath = filepath
         self.tr_rules: Dict[str, str] = {}  # Dict[right-node, type-raised left-node]
     
@@ -45,7 +35,23 @@ class ApplyTypeRaise(object):
             return tr
         else:
             raise Exception
-        
+
+
+    def apply_typeraise(self, node: Tree) -> Tree:
+        if node.is_leaf:
+            return Tree.make_terminal(node.token, node.cat)
+        elif node.is_unary:
+            return Tree.make_unary(node.cat, self.apply_typeraise(node.child), node.op_string, node.op_symbol)
+        elif node.left_child.cat.is_atomic and node.left_child.cat.base == 'NP' and node.right_child.cat.is_functor:
+            s = str(node.right_child.cat)
+            if re.match(r'(\(*)S', s) is not None and s.count('S') == 1:
+                return Tree.make_binary(node.cat, Tree.make_unary(self.apply_tr_rules(node.left_child.cat, node.right_child.cat), self.apply_typeraise(node.left_child), 'tr', '>T'), self.apply_typeraise(node.right_child), 'fa', '>')
+            else:
+                return Tree.make_binary(node.cat, self.apply_typeraise(node.left_child), self.apply_typeraise(node.right_child), node.op_string, node.op_symbol)
+        else:
+            return Tree.make_binary(node.cat, self.apply_typeraise(node.left_child), self.apply_typeraise(node.right_child), node.op_string, node.op_symbol)
+    
+    
         
     def _traverse(self, tree: Tree) -> None:
         if tree.is_leaf == False:
@@ -65,16 +71,9 @@ class ApplyTypeRaise(object):
                         np_op_symbol = left.op_symbol
                         
                         tr_cat = self.apply_tr_rules(left.cat, right.cat)
-                        tr_children = [Tree(np_cat, np_children, np_op_string, np_op_symbol)]
+                        tr_children = [Tree(np_cat, np_children, np_op_string, np_op_symbol)]                        
                         
-                        
-                        s_cat = tree.cat
-                        s_children = tree.children
-                        s_op_string = tree.op_string
-                        s_op_symbol = tree.op_symbol
-                        
-                        
-                        tree.left_child.children = [Tree(left.cat, left.children, left.op_string, left.op_symbol)]
+                        tree.left_child.children = [Tree(np_cat, np_children, np_op_string, np_op_symbol)]
                         # tree.children = [Tree(tr_cat, [tree.left_child], 'tr', '>T'), right]
                         # tree = Tree(tree.cat, tree.children, 'fa', '>')
                         # tree.children = [Tree(tr_cat, tr_children, 'tr', '>T'), right]
@@ -89,15 +88,7 @@ class ApplyTypeRaise(object):
                         # tree.left_child.children = np_children
                         # tree.children = [Tree(typeraise, origin_children, 'tr', '>T'), right]
                         # tree = Tree(tree_cat, [tree_left, right], 'fa', '>')
-                                                         
-                        
-                        
-                        
-                        # tree.left_child.children: List[Tree] = [Tree(origin_cat, origin_children, origin_op_string, origin_op_symbol)]
-                        # tree.children: List[Tree] = [Tree(typeraise, tree.left_child.children, 'tr', '>T')]
-                        # # tree.op_string, tree.op_symbol = 'fa', '>'
-                        # tree = Tree(tree_cat, tree.children, 'fa', '>')
-    
+
     @staticmethod
     def typeraise(args):
         self = ApplyTypeRaise(args.PATH)
@@ -108,7 +99,7 @@ class ApplyTypeRaise(object):
         trees = [tree for _, _, tree in read_parsedtree(self.filepath)]
         with open(parent / textname, 'w') as f:
             for tree in trees:
-                self._traverse(tree)
+                tree = self.apply_typeraise(tree)
                 f.write(ja_of(tree))
                 f.write('\n')
 
