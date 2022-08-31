@@ -37,38 +37,39 @@ class ApplyTypeRaise(object):
             raise Exception
 
 
-    def apply_typeraise(self, node: Tree) -> Tree:
-        if node.is_leaf:
-            return Tree.make_terminal(node.token, node.cat)
-        elif node.is_unary:
-            return Tree.make_unary(node.cat,
-                                   self.apply_typeraise(node.child),
-                                   node.op_string, node.op_symbol)
-        elif node.left_child.cat.is_atomic and node.left_child.cat.base == 'NP' and node.right_child.cat.is_functor:
-            s = str(node.right_child.cat)
-            if re.match(r'(\(*)S', s) is not None and s.count('S') == 1:
-                return Tree.make_binary(node.cat,
-                                        Tree.make_unary(self.typeraise(node.left_child.cat,
-                                                                       node.right_child.cat),
-                                                        self.apply_typeraise(node.left_child),
-                                                        'tr',
-                                                        '>T'),
-                                        self.apply_typeraise(node.right_child),
-                                        'fa',
-                                        '>')
+    def apply_typeraise(self, tree: Tree) -> Tree:
+        def _apply_typeraise(node: Tree) -> Tree:
+            if node.is_leaf:
+                return Tree.make_terminal(node.token, node.cat)
+            elif node.is_unary:
+                return Tree.make_unary(node.cat,
+                                    _apply_typeraise(node.child),
+                                    node.op_string, node.op_symbol)
+            elif node.left_child.cat.is_atomic and node.left_child.cat.base == 'NP' and node.right_child.cat.is_functor:
+                s = str(node.right_child.cat)
+                if re.match(r'(\(*)S', s) is not None and s.count('S') == 1:
+                    return Tree.make_binary(node.cat,
+                                            Tree.make_unary(self.typeraise(node.left_child.cat,
+                                                                        node.right_child.cat),
+                                                            _apply_typeraise(node.left_child),
+                                                            'tr',
+                                                            '>T'),
+                                            _apply_typeraise(node.right_child),
+                                            'fa',
+                                            '>')
+                else:
+                    return Tree.make_binary(node.cat,
+                                            _apply_typeraise(node.left_child),
+                                            _apply_typeraise(node.right_child),
+                                            node.op_string,
+                                            node.op_symbol)
             else:
                 return Tree.make_binary(node.cat,
-                                        self.apply_typeraise(node.left_child),
-                                        self.apply_typeraise(node.right_child),
+                                        _apply_typeraise(node.left_child),
+                                        _apply_typeraise(node.right_child),
                                         node.op_string,
                                         node.op_symbol)
-        else:
-            return Tree.make_binary(node.cat,
-                                    self.apply_typeraise(node.left_child),
-                                    self.apply_typeraise(node.right_child),
-                                    node.op_string,
-                                    node.op_symbol)
-    
+        return _apply_typeraise(tree)
     
         
     def _traverse(self, tree: Tree) -> None:
