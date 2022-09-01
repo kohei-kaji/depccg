@@ -24,17 +24,17 @@ from depccg.tree import Tree
 class ApplyRightToLeft(object):
     def __init__(self, filepath: str):
         self.filepath = filepath
-        self.fa = '>'
-        self.ba = '<'
-        self.fc = '>B'
-        self.bc1 = '<B1'
-        self.bc2 = '<B2'
-        self.bc3 = '<B3'
-        self.bc4 = '<B4'
-        self.gfc1 = '>Bx1'
-        self.gfc2 = '>Bx2'
-        self.gfc3 = '>Bx3'
-        self.order_dict: Dict[str, int] = {
+        # self.fa = '>'
+        # self.ba = '<'
+        # self.fc = '>B'
+        # self.bc1 = '<B1'
+        # self.bc2 = '<B2'
+        # self.bc3 = '<B3'
+        # self.bc4 = '<B4'
+        # self.gfc1 = '>Bx1'
+        # self.gfc2 = '>Bx2'
+        # self.gfc3 = '>Bx3'
+        self.order: Dict[str, int] = {
             '>':0,
             '<':0,
             '>B':1,
@@ -46,28 +46,38 @@ class ApplyRightToLeft(object):
             '>Bx2':2,
             '>Bx3':3
             }
+        self.forward: Dict[str, bool] = {
+            '>':True,
+            '<':False,
+            '>B':True,
+            '<B1':False,
+            '<B2':False,
+            '<B3':False,
+            '<B4':False,
+            '>Bx1':True,
+            '>Bx2':True,
+            '>Bx3':True 
+        }
     
-    def toLeftBranching(self, node: Tree) -> Tree:
+    def rotate2left(self, node: Tree) -> Tree:
         if node.is_leaf:
             return node
         elif node.is_unary:
             return Tree.make_unary(node.cat,
-                                   self.toLeftBranching(node.child),
+                                   self.rotate2left(node.child),
                                    node.op_string,
                                    node.op_symbol)
         else:  # if node is binary
             return self.sinkForwardLeftward(Tree.make_binary(node.cat,
-                                                        self.toLeftBranching(node.left_child),
-                                                        self.toLeftBranching(node.right_child),
+                                                        self.rotate2left(node.left_child),
+                                                        self.rotate2left(node.right_child),
                                                         node.op_string,
                                                         node.op_symbol))
     
     def rebuild(self, combinatorOrder: int, node: Tree) -> Optional[Tree]:
-        match node:
-            case 
-        
         if node.is_unary == False:
-            if combinatorOrder >= self.order_dict[node.op_symbol]:
+            if node.right_child.is_unary == False:
+                if combinatorOrder >= self.order[node.op_symbol]:
                 
         else:
             return None
