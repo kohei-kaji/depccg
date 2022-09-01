@@ -74,10 +74,14 @@ class ApplyRightToLeft(object):
                                                         node.op_string,
                                                         node.op_symbol))
     
-    def rebuild(self, combinatorOrder: int, node: Tree) -> Optional[Tree]:
-        if node.is_unary == False:
-            if node.right_child.is_unary == False:
-                if combinatorOrder >= self.order[node.op_symbol]:
+    def rebuild(self, nodeorder: int, node: Tree) -> Optional[Tree]:
+        if node.is_unary == False and self.forward[node.op_symbol]:  # if node is binary and category is forward
+            left, right = node.children
+            if right.is_unary == False:
+                if nodeorder >= self.order[node.op_symbol]:
+                    if self.forward[right.op_symbol] == False:
+
+                
                 
         else:
             return None
