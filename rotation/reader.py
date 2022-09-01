@@ -100,4 +100,4 @@ class ParsedJaCCGLineReader(object):
             assert len(
                 children) == 2, f'failed to parse, invalid number of children: {self.line}'
             left, right = children
-            return Tree.make_binary(cat, left, right, op_string, op_string)
+            return Tree.make_binary(cat, left, right, op_string.replace("{", ""), op_string.replace("{", ""))
