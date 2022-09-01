@@ -14,14 +14,14 @@ class ApplyTypeRaise(object):
     def __init__(self, filepath: str) -> None:
         self.filepath = filepath
         self.tr_rules: Dict[str, str] = {}  # Dict[right-node, type-raised left-node]
-    
+
     def readdict(self, dictpath: str = '/Users/kako/depccg/rotation/trdict.txt'):
         with open(dictpath, 'r') as f:
             for line in f:
                 line = line.split()
                 self.tr_rules[line[0]] = line[1]
         return self.tr_rules
-    
+
     # X -> T/(T\X)
     def typeraise(self, x: Atom, y:Functor) -> Functor:
         # results = [result for result in self.tr_rules[x.base]
@@ -30,7 +30,7 @@ class ApplyTypeRaise(object):
         # return results[0]
         uni = Unification("a/b", "b")
         tr: Functor = Category.parse(self.tr_rules[str(y)])
-        
+
         if uni(tr, y):
             return tr
         else:
@@ -70,43 +70,7 @@ class ApplyTypeRaise(object):
                                         node.op_string,
                                         node.op_symbol)
         return _apply_typeraise(tree)
-    
-        
-    def _traverse(self, tree: Tree) -> None:
-        if tree.is_leaf == False:
-            if len(tree.children) == 1:
-                self._traverse(tree.children[0])
-            else:
-                left, right = tree.children
-                self._traverse(left)
-                self._traverse(right)
-                if left.cat.is_atomic and left.cat.base == 'NP' and right.cat.is_functor: # if left is NP and right is a functor
-                    s = str(right.cat)
-                    if re.match(r'(\(*)S', s) is not None and s.count('S') == 1:  # if right starts with S, that is, right is VP
-                        
-                        np_cat = left.cat
-                        np_children = left.children
-                        np_op_string = left.op_string
-                        np_op_symbol = left.op_symbol
-                        
-                        tr_cat = self.typeraise(left.cat, right.cat)
-                        tr_children = [Tree(np_cat, np_children, np_op_string, np_op_symbol)]                        
-                        
-                        tree.left_child.children = [Tree(np_cat, np_children, np_op_string, np_op_symbol)]
-                        # tree.children = [Tree(tr_cat, [tree.left_child], 'tr', '>T'), right]
-                        # tree = Tree(tree.cat, tree.children, 'fa', '>')
-                        # tree.children = [Tree(tr_cat, tr_children, 'tr', '>T'), right]
-                        # tree = Tree(tree.cat, tree.children, 'fa', '>')
-                        # tree.op_string = 'fa'
-                        # tree.op_symbol = '>'
-                       
-                        # tree = Tree(tree_cat, [tree_left, right], 'fa', '>')
-                        # tree.children = [Tree(typeraise, origin_children, 'tr', '>T'), right]
-                        # tree.left_child.children = origin_children
-                        
-                        # tree.left_child.children = np_children
-                        # tree.children = [Tree(typeraise, origin_children, 'tr', '>T'), right]
-                        # tree = Tree(tree_cat, [tree_left, right], 'fa', '>')
+
 
     @staticmethod
     def create_typeraised_tree(args):
@@ -131,7 +95,7 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     ApplyTypeRaise.create_typeraised_tree(args)
-                        
+  
 
 
 #################################################
