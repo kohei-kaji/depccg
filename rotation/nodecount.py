@@ -23,9 +23,6 @@ class NodeCount(object):
         else:
             self.results.append(self.count)
             self.count += 1
-        ##########################################################
-    	##### binary treeのみで挙動確認。type-raise含みについては未確認。
-    	##########################################################
 
 def nodecount(tree: Tree) -> Tuple[List[Token], List[int]]:
     nd = NodeCount()
