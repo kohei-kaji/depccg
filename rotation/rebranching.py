@@ -4,6 +4,7 @@ Unlike English, CCG categories are assigned to each punctuation in Japanese,
 so punctuation rules (implemented in Rotating-CCG) are not necessary.
 """
 
+import re
 from typing import Dict, Optional
 
 from depccg.tree import Tree
@@ -24,16 +25,16 @@ from depccg.tree import Tree
 class ApplyRightToLeft(object):
     def __init__(self, filepath: str):
         self.filepath = filepath
-        # self.fa = '>'
-        # self.ba = '<'
-        # self.fc = '>B'
-        # self.bc1 = '<B1'
-        # self.bc2 = '<B2'
-        # self.bc3 = '<B3'
-        # self.bc4 = '<B4'
-        # self.gfc1 = '>Bx1'
-        # self.gfc2 = '>Bx2'
-        # self.gfc3 = '>Bx3'
+        self.fa = '>'
+        self.ba = '<'
+        self.fc = '>B'
+        self.bc1 = '<B1'
+        self.bc2 = '<B2'
+        self.bc3 = '<B3'
+        self.bc4 = '<B4'
+        self.gfc1 = '>Bx1'
+        self.gfc2 = '>Bx2'
+        self.gfc3 = '>Bx3'
         self.order: Dict[str, int] = {
             '>':0,
             '<':0,
@@ -75,9 +76,13 @@ class ApplyRightToLeft(object):
                                                         node.op_symbol))
     
     def rebuild(self, nodeorder: int, node: Tree) -> Optional[Tree]:
-        if node.is_unary == False and self.forward[node.op_symbol]:  # if node is binary and category is forward
+        if node.is_unary == False and self.forward[node.op_symbol] and nodeorder >= self.order[node.op_symbol]:  # if node is binary and category is forward
             left, right = node.children
-            if right.is_unary == False:
+            if node.op_symbol == self.fc and left.cat.is_functor:
+                s = str(left.cat)
+                if re.match(r'(\(*)NP', s) is not None:
+                    return None
+                
                 if nodeorder >= self.order[node.op_symbol]:
                     if self.forward[right.op_symbol] == False:
 
