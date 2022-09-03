@@ -1,3 +1,9 @@
+# In Japanese CCGBank op_string is not used, so the name of a variable should be 'op_symbol'.
+# Following original reader.py, combinators (op_symbols) are loaded with an unnecessary brace ('{').
+# As this brace may be mistaken for the start of a constituent, an unnecessary brace must be discarded.
+# I have not specified the cause of this problem, but I added some code to discard all the braces in op_symbol.
+
+
 from typing import Iterator, List, Tuple
 # import re
 
@@ -7,10 +13,11 @@ from depccg.types import Token
 from depccg.tools.reader import ReaderResult
 
 
+# >T combinator is added
 combinators = {
     'SSEQ', '>', '<', '>B', '<B1', '<B2', '<B3',
     '<B4', '>Bx1', '>Bx2', '>Bx3',
-    'ADNext', 'ADNint', 'ADV0', 'ADV1', 'ADV2'
+    'ADNext', 'ADNint', 'ADV0', 'ADV1', 'ADV2', '>T'
 }
 
 # DEPENDENCY = re.compile(r'{.+?}')
