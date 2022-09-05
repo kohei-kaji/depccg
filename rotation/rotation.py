@@ -2,11 +2,12 @@
 # - Unlike English, CCG categories are assigned to each punctuation in Japanese,
 #   so special punctuation rules are not necessary.
 
+import re
 import argparse
 from pathlib import Path
 from typing import Dict, Optional
 
-from depccg.cat import Category
+from depccg.cat import Functor
 from depccg.tree import Tree
 from depccg.unification import Unification
 from depccg.printer.ja import ja_of
@@ -118,14 +119,14 @@ class TreeRotation(object):
 	######################################################################
 
     def sinkForwardLeftward(self, top: Tree) -> Tree:
-        if top.is_unary == False:
+        if (top.is_unary == False) and (self.forward(top.op_symbol)):
             a = top.left_child
             right = top.right_child
             def rebuild(x: int, r: Tree) -> Optional[Tree]:
                 if r.is_unary == False:  # if node is binary,
                     y = self.cat_to_order[r.op_symbol]
-                    if (self.forward(r.op_symbol)) and (x >= y):  # if forward-rotate-to-left can be applied,
-                        b, c = r.children
+                    b, c = r.children
+                    if (self.forward(r.op_symbol)) and (x >= y):
                         new_order = x-y+1
                         newl = rebuild(new_order, b)
                         if isinstance(newl, Tree):
@@ -137,7 +138,7 @@ class TreeRotation(object):
                         elif (newl == None) and (new_order <= 2):
                             uni = Unification("a/b", "b/c")
                             uni(a.cat, b.cat)
-                            newl_cat = Category.parse(str(uni["a"]) + "/(" + str(uni["c"]) + ")")
+                            newl_cat = Functor(uni["a"], "/", uni["c"])
                             newl_string = self.order_to_forwardstring[new_order]
                             newl_symbol = self.order_to_forwardsymbol[new_order]
                             return Tree.make_binary(top.cat,
@@ -151,6 +152,32 @@ class TreeRotation(object):
                                                     r.op_symbol)
                         else:
                             return None
+
+                    elif (top.op_symbol == '>') and (r.op_symbol == '<') and (re.match(r'(\(*)NP', str(b.cat)) is not None) and (a.cat.right.base == 'NP') and (c.cat.right.base == 'NP'):
+                        new_order = x
+                        newl = rebuild(new_order, b)
+                        if isinstance(newl, Tree):
+                            return Tree.make_binary(top.cat,
+                                                    newl,
+                                                    c,
+                                                    'ba',
+                                                    '<')
+                        elif newl == None:
+                            uni = Unification("a/b", "b")
+                            uni(a.cat, b.cat)
+                            newl_cat = uni["a"]
+                            return Tree.make_binary(top.cat,
+                                                    Tree.make_binary(newl_cat,
+                                                                    a,
+                                                                    b,
+                                                                    'fa',
+                                                                    '>'),
+                                                    c,
+                                                    'ba',
+                                                    '<')
+                        else:
+                            return None
+
                     else:
                         return None
                 else:
