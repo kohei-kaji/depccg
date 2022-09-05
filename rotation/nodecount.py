@@ -1,14 +1,15 @@
 import argparse
 from pathlib import Path
-from typing import Tuple, List
+from typing import List, Tuple
 
+import numpy as np
 from depccg.tree import Tree, Token
 from reader import read_parsedtree
 
 class NodeCount(object):
     def __init__(self):
         self.count = 1
-        self.results = []
+        self.counts = []
 
     def traverse(self, node: Tree) -> None:
         if node.is_leaf == False:
@@ -21,39 +22,41 @@ class NodeCount(object):
                 self.traverse(children[1])
                 self.count += 1
         else:
-            self.results.append(self.count)
+            self.counts.append(self.count)
             self.count += 1
 
 def nodecount(tree: Tree) -> Tuple[List[Token], List[int]]:
     nd = NodeCount()
     nd.traverse(tree)
-    nd.results.append(nd.count)
-    results = [j-i for i,j in zip(nd.results, nd.results[1:])]
+    nd.counts.append(nd.count)
     tokens = [token['word'] for token in tree.tokens]
+    counts = [j-i for i,j in zip(nd.counts, nd.counts[1:])]
     ##########################################################
     ##### Tokenに'word'しかないかは未確認。
     ##########################################################
-    
-    return tokens, results
+
+    return tokens, counts
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('FILE',
                         type=str,
                         help='path to the input text file of parsed tree')
-    
+
     args = parser.parse_args()
     parent = str(Path(args.FILE).parent)
     file = str(Path(args.FILE).stem)
-    
+
     trees = [tree for _, _, tree in read_parsedtree(args.FILE)]
-    output_path = parent + '/' + file + '_nodecount'
-    
+    output_path = parent + '/' + file + '_nodecount.csv'
+
+    tokens = []
+    counts = []
     for tree in trees:
-    	tokens, results = nodecount(tree)
-    ##########################################################
-    ##### ファイルへの書き込み
-    ##### tokens, resultsをcsvに縦に書き込めば後々楽か
-    ##########################################################
-    
-    
+        node_count = nodecount(tree)
+        tokens += node_count[0]
+        counts += node_count[1]
+    arr_tokens = np.array(tokens, dtype=object)
+    arr_counts = np.array(counts, dtype=object)
+    results = np.stack([arr_tokens, arr_counts])
+    np.savetxt(output_path, results.T, fmt="%s", delimiter=',', newline='\n')
