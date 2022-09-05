@@ -2,7 +2,6 @@
 # - Unlike English, CCG categories are assigned to each punctuation in Japanese,
 #   so special punctuation rules are not necessary.
 
-import re
 import argparse
 from pathlib import Path
 from typing import Dict, Optional
@@ -84,18 +83,38 @@ class TreeRotation(object):
     #
     #
     #
-    #          >B0:S                                    >B0:S
+    # - Common rotation examples.
+    # (1)
+    #          >B0:S                                  　>B0:S
     #        /       \                                /      \
     #  S/(S\NP)    >B0:S\NP        =>    >B1:S/((S\NP)\NP)   S\NP\NP
     #             /       \                      /      \
 	#  (S\NP)/(S\NP\NP)  S\NP\NP           S/(S\NP)   (S\NP)/(S\NP\NP)
 	#
-    #
-    #          >B0:NP                             >B0:NP
-    #        /       \                           /      \
+    # (2)
+    #          >B0:NP                            >B0:NP
+    #        /       \                          /      \
     #     NP/NP    >B0:NP          =>      >B1:NP/NP    NP
     #             /       \                 /      \
 	#           NP/NP     NP             NP/NP    NP/NP
+    #
+    #
+    #
+    # - forward, backward混在型, crossed composition混じりは未対応
+    #   - crossed composition混じりが現れうるかについては未確認。
+    # (3)
+    #          >B0:NP                            <B0:NP
+    #         /      \                           /     \
+    #     NP/NP    <B0:NP        =>           >B0:NP   NP\NP
+    #             /      \                   /     \
+	#            NP     NP\NP              NP/NP    NP
+	#
+    # (4)
+    #        >Bx1:S/NP                          >Bx1:S/NP
+    #        /       \                           /      \
+    #      S/S   >Bx1:S/NP          =>      >B1:S/NP   NP\NP
+    #             /       \                /      \
+	#           S/NP     NP\NP           S/S     S/NP
 	######################################################################
 
     def sinkForwardLeftward(self, top: Tree) -> Tree:
