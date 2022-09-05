@@ -68,18 +68,20 @@ class TreeRotation(object):
                                                         node.op_symbol))
 
 
-	######################################################
+
+	######################################################################
     #       >Bx                         >By
     #       /  \      (if x ≥ y)        /  \
     #      a   >By        =>      >B(x-y+1) c
     #          /  \                   /  \
 	#         b    c                 a    b
 	#
-	# input:
-	# 	x: int, >By(b, c): Tree
-	# output:
-	# 	left-branched tree or None
-	######################################################
+    # sinkForwardLeftward :: [Tree(right-branch)] -> [Tree(left-branch)]
+    #   // implemented from bottom to up
+    #
+    # rebuild :: [x: int] -> [>By(b,c): Tree] -> Optional[Tree]
+	######################################################################
+
     def sinkForwardLeftward(self, top: Tree) -> Tree:
         if top.is_unary == False:
             a = top.left_child
