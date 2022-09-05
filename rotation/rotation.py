@@ -70,13 +70,13 @@ class TreeRotation(object):
 
 
 
-	######################################################################
+    ######################################################################
     #       >Bx                         >By
     #       /  \      (if x ≥ y)        /  \
     #      a   >By        =>      >B(x-y+1) c
     #          /  \                   /  \
-	#         b    c                 a    b
-	#
+    #         b    c                 a    b
+    #
     # sinkForwardLeftward :: [Tree(right-branch)] -> [Tree(left-branch)]
     #   // implemented from bottom to up
     #
@@ -90,14 +90,14 @@ class TreeRotation(object):
     #        /       \                                /      \
     #  S/(S\NP)    >B0:S\NP        =>    >B1:S/((S\NP)\NP)   S\NP\NP
     #             /       \                      /      \
-	#  (S\NP)/(S\NP\NP)  S\NP\NP           S/(S\NP)   (S\NP)/(S\NP\NP)
-	#
+    #  (S\NP)/(S\NP\NP)  S\NP\NP           S/(S\NP)   (S\NP)/(S\NP\NP)
+    #
     # (2)
     #          >B0:NP                            >B0:NP
     #        /       \                          /      \
     #     NP/NP    >B0:NP          =>      >B1:NP/NP    NP
     #             /       \                 /      \
-	#           NP/NP     NP             NP/NP    NP/NP
+    #           NP/NP     NP             NP/NP    NP/NP
     #
     #
     #
@@ -108,15 +108,15 @@ class TreeRotation(object):
     #         /      \                           /     \
     #     NP/NP    <B0:NP        =>           >B0:NP   NP\NP
     #             /      \                   /     \
-	#            NP     NP\NP              NP/NP    NP
-	#
+    #            NP     NP\NP              NP/NP    NP
+    #
     # (4)
     #        >Bx1:S/NP                          >Bx1:S/NP
     #        /       \                           /      \
     #      S/S   >Bx1:S/NP          =>      >B1:S/NP   NP\NP
     #             /       \                /      \
-	#           S/NP     NP\NP           S/S     S/NP
-	######################################################################
+    #           S/NP     NP\NP           S/S     S/NP
+    ######################################################################
 
     def sinkForwardLeftward(self, top: Tree) -> Tree:
         if (top.is_unary == False) and (self.forward(top.op_symbol)):
