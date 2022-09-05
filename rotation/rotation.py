@@ -53,18 +53,18 @@ class TreeRotation(object):
         return (cat_symbol.startswith('>')) and ('x' not in cat_symbol)
     
     
-    def rotate2left(self, node: Tree) -> Tree:
+    def rotate(self, node: Tree) -> Tree:
         if node.is_leaf:
             return node
         elif node.is_unary:
             return Tree.make_unary(node.cat,
-                                   self.rotate2left(node.child),
+                                   self.rotate(node.child),
                                    node.op_string,
                                    node.op_symbol)
         else:  # if node is binary
             return self.sinkForwardLeftward(Tree.make_binary(node.cat,
-                                                        self.rotate2left(node.left_child),
-                                                        self.rotate2left(node.right_child),
+                                                        self.rotate(node.left_child),
+                                                        self.rotate(node.right_child),
                                                         node.op_string,
                                                         node.op_symbol))
 
@@ -153,7 +153,11 @@ class TreeRotation(object):
                         else:
                             return None
 
-                    elif (top.op_symbol == '>') and (r.op_symbol == '<') and (re.match(r'(\(*)NP', str(b.cat)) is not None) and (a.cat.right.base == 'NP') and (c.cat.right.base == 'NP'):
+                    elif (top.op_symbol == '>')\
+                            and (r.op_symbol == '<')\
+                                and (a.cat.right.base == 'NP')\
+                                        and (c.cat.right.base == 'NP')\
+                                            and (re.match(r'(\(*)NP', str(b.cat)) is not None):
                         new_order = x
                         newl = rebuild(new_order, b)
                         if isinstance(newl, Tree):
@@ -199,7 +203,7 @@ class TreeRotation(object):
         trees = [tree for _, _, tree in read_parsedtree(self.filepath)]
         with open(parent / textname, 'w') as f:
             for tree in trees:
-                tree = self.rotate2left(tree)
+                tree = self.rotate(tree)
                 f.write(ja_of(tree))
                 f.write('\n')
 
