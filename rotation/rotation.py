@@ -2,6 +2,7 @@
 # - Unlike English, CCG categories are assigned to each punctuation in Japanese,
 #   so special punctuation rules are not necessary.
 
+import re
 import argparse
 from pathlib import Path
 from typing import Dict, Optional
@@ -49,7 +50,7 @@ class TreeRotation(object):
         
 
     def forward(self, cat_symbol: str) -> bool:
-        return cat_symbol.startswith('>')
+        return (cat_symbol.startswith('>')) and ('x' not in cat_symbol)
     
     
     def rotate2left(self, node: Tree) -> Tree:
@@ -79,7 +80,22 @@ class TreeRotation(object):
     # sinkForwardLeftward :: [Tree(right-branch)] -> [Tree(left-branch)]
     #   // implemented from bottom to up
     #
-    # rebuild :: [x: int] -> [>By(b,c): Tree] -> Optional[Tree]
+    # rebuild :: [x: int] -> [>By(b,c): Tree] -> [Optional[Tree]]
+    #
+    #
+    #
+    #          >B0:S                                    >B0:S
+    #        /       \                                /      \
+    #  S/(S\NP)    >B0:S\NP        =>    >B1:S/((S\NP)\NP)   S\NP\NP
+    #             /       \                      /      \
+	#  (S\NP)/(S\NP\NP)  S\NP\NP           S/(S\NP)   (S\NP)/(S\NP\NP)
+	#
+    #
+    #          >B0:NP                             >B0:NP
+    #        /       \                           /      \
+    #     NP/NP    >B0:NP          =>      >B1:NP/NP    NP
+    #             /       \                 /      \
+	#           NP/NP     NP             NP/NP    NP/NP
 	######################################################################
 
     def sinkForwardLeftward(self, top: Tree) -> Tree:
