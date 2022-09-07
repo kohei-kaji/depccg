@@ -88,7 +88,7 @@ class TreeRotation(object):
     # (1)
     #          >B0:S                                  　>B0:S
     #        /       \                                /      \
-    #  S/(S\NP)    >B0:S\NP        =>    >B1:S/((S\NP)\NP)   S\NP\NP
+    #  S/(S\NP)    >B0:S\NP        =>      >B1:S/(S\NP\NP)   S\NP\NP
     #             /       \                      /      \
     #  (S\NP)/(S\NP\NP)  S\NP\NP           S/(S\NP)   (S\NP)/(S\NP\NP)
     #
@@ -158,34 +158,23 @@ class TreeRotation(object):
                                 and (a.cat.right.base == 'NP')\
                                         and (c.cat.right.base == 'NP')\
                                             and (re.match(r'(\(*)NP', str(b.cat)) is not None):
-                        new_order = x
-                        newl = rebuild(new_order, b)
-                        if isinstance(newl, Tree):
-                            return Tree.make_binary(top.cat,
-                                                    newl,
-                                                    c,
-                                                    'ba',
-                                                    '<')
-                        elif newl == None:
-                            uni = Unification("a/b", "b")
-                            uni(a.cat, b.cat)
-                            newl_cat = uni["a"]
-                            return Tree.make_binary(top.cat,
-                                                    Tree.make_binary(newl_cat,
-                                                                    a,
-                                                                    b,
-                                                                    'fa',
-                                                                    '>'),
-                                                    c,
-                                                    'ba',
-                                                    '<')
-                        else:
-                            return None
-
+                        uni = Unification("a/b", "b")
+                        uni(a.cat, b.cat)
+                        newl_cat = uni["a"]
+                        return Tree.make_binary(top.cat,
+                                                Tree.make_binary(newl_cat,
+                                                                a,
+                                                                b,
+                                                                'fa',
+                                                                '>'),
+                                                c,
+                                                'ba',
+                                                '<')
                     else:
                         return None
                 else:
                     return None
+
             rebranch = rebuild(self.cat_to_order[top.op_string],
                                right)
             
@@ -193,6 +182,8 @@ class TreeRotation(object):
                 return rebranch
             else:
                 return top
+        else:
+            return top
     
     @staticmethod
     def create_rotated_tree(args):
