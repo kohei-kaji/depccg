@@ -7,7 +7,7 @@ import argparse
 from pathlib import Path
 from typing import Dict, Optional
 
-from depccg.cat import Functor
+from depccg.cat import Category, Functor, Atom
 from depccg.tree import Tree
 from depccg.unification import Unification
 from depccg.printer.ja import ja_of
@@ -51,6 +51,17 @@ class TreeRotation(object):
 
     def forward(self, cat_symbol: str) -> bool:
         return (cat_symbol.startswith('>')) and ('x' not in cat_symbol)
+
+
+    def clear_features(self, cat: Category) -> Category:
+        if cat.is_functor:
+            return Functor(
+                self.clear_features(cat.left),
+                cat.slash,
+                self.clear_features(cat.right)
+            )
+        else:
+            return Atom(cat.base)
     
     
     def rotate(self, node: Tree) -> Tree:
@@ -137,39 +148,46 @@ class TreeRotation(object):
                                                     r.op_symbol)
                         elif (newl == None) and (new_order <= 2):
                             uni = Unification("a/b", "b/c")
-                            uni(a.cat, b.cat)
-                            newl_cat = Functor(uni["a"], "/", uni["c"])
-                            newl_string = self.order_to_forwardstring[new_order]
-                            newl_symbol = self.order_to_forwardsymbol[new_order]
-                            return Tree.make_binary(top.cat,
-                                                    Tree.make_binary(newl_cat,
-                                                                    a,
-                                                                    b,
-                                                                    newl_string,
-                                                                    newl_symbol),
-                                                    c,
-                                                    r.op_string,
-                                                    r.op_symbol)
+                            if uni(self.clear_features(a.cat),
+                                   b.cat):  # ignore the features of a.cat in this momemt
+                                newl_cat = Functor(a.cat.left, "/", uni["c"])
+                                newl_string = self.order_to_forwardstring[new_order]
+                                newl_symbol = self.order_to_forwardsymbol[new_order]
+                                return Tree.make_binary(top.cat,
+                                                        Tree.make_binary(newl_cat,
+                                                                        a,
+                                                                        b,
+                                                                        newl_string,
+                                                                        newl_symbol),
+                                                        c,
+                                                        r.op_string,
+                                                        r.op_symbol)
+                            else:
+                                return None
                         else:
                             return None
 
                     elif (top.op_symbol == '>')\
                             and (r.op_symbol == '<')\
                                 and (a.cat.right.base == 'NP')\
-                                        and (c.cat.right.base == 'NP')\
-                                            and (re.match(r'(\(*)NP', str(b.cat)) is not None):
+                                        and (c.cat.right.is_atomic)\
+                                            and (c.cat.right.base == 'NP')\
+                                                and (re.match(r'(\(*)NP', str(b.cat)) is not None):
                         uni = Unification("a/b", "b")
-                        uni(a.cat, b.cat)
-                        newl_cat = uni["a"]
-                        return Tree.make_binary(top.cat,
-                                                Tree.make_binary(newl_cat,
-                                                                a,
-                                                                b,
-                                                                'fa',
-                                                                '>'),
-                                                c,
-                                                'ba',
-                                                '<')
+                        if uni(self.clear_features(a.cat),
+                                   b.cat):
+                            newl_cat = a.cat.left
+                            return Tree.make_binary(top.cat,
+                                                    Tree.make_binary(newl_cat,
+                                                                    a,
+                                                                    b,
+                                                                    'fa',
+                                                                    '>'),
+                                                    c,
+                                                    'ba',
+                                                    '<')
+                        else:
+                            return None
                     else:
                         return None
                 else:
