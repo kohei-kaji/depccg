@@ -1,12 +1,41 @@
 import argparse
 from typing import List
 
+from depccg.utils import denormalize
 from depccg.tools.ja.reader import read_ccgbank
 from depccg.printer.html import _MATHML_MAIN, _mathml_subtree
-from depccg.printer.auto import auto_of
 from pathlib import Path
 from depccg.tree import Tree
+
+from clear_features import clear_features
 from reader import read_parsedtree
+
+# rewrite auto_of (depccg/printer/auto.py)
+def featureless_auto_of(tree: Tree) -> str:
+    """tree string in auto format which discards ternary features
+
+    Args:
+        tree (Tree): tree object
+
+    Returns:
+        str: tree string in the auto format
+    """
+    def rec(node):
+        if node.is_leaf:
+            cat = node.cat
+            cat = clear_features(cat)
+            word = denormalize(node.word)
+            pos = node.token.get('pos', 'POS')
+            return f'(<L {cat} {pos} {pos} {word} {cat}>)'
+        else:
+            cat = node.cat
+            cat = clear_features(cat)
+            children = ' '.join(rec(child) for child in node.children)
+            num_children = len(node.children)
+            head_is_left = 0 if node.head_is_left else 1
+            return f'(<T {cat} {head_is_left} {num_children}> {children} )'
+
+    return rec(tree)
 
 def ja_to_auto(output_path: str, trees: List[Tree]):
     """rewrite Japanese CCGBank with English CCGBank format.
@@ -19,7 +48,7 @@ def ja_to_auto(output_path: str, trees: List[Tree]):
     """
     with open(output_path, 'w') as f:
         for tree in trees:
-            f.write(auto_of(tree))
+            f.write(featureless_auto_of(tree))
             f.write('\n')
 
 def ja_to_html(output_path: str, trees: List[Tree]):
@@ -59,7 +88,7 @@ if __name__ == '__main__':
     if args.input == 'parsed':
         trees = [tree for _, _, tree in read_parsedtree(args.FILE)]
         if args.output == 'auto':    
-            output_name = parent + '/' + file + '_converted'
+            output_name = parent + '/' + file + '_auto'
             ja_to_auto(output_name, trees)
         else:
             output_name = parent + '/' + file + '.html'
@@ -68,7 +97,7 @@ if __name__ == '__main__':
     else:
         trees = [tree for _, _, tree in read_ccgbank(args.FILE)]
         if args.output == 'auto':    
-            output_name = parent + '/' + file + '_converted'
+            output_name = parent + '/' + file + '_auto'
             ja_to_auto(output_name, trees)
         else:
             output_name = parent + '/' + file + '.html'
