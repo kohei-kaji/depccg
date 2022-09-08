@@ -25,8 +25,15 @@ class NodeCount(object):
             self.counts.append(self.count)
             self.count += 1
 
-def nodecount(filepath: str):
-    trees = [tree for _, _, tree in read_parsedtree(filepath)]
+def nodecount(filepath: str, trees: List[Tree]):
+    """Count the number of nodes by bottom-up traversal
+
+    Args:
+        filepath (str): input text file parsed by depccg (Ja format)
+
+    Results:
+        output csv file
+    """
     tokens: List[Token] = []
     counts: List[int] = []
     for tree in trees:
@@ -41,7 +48,7 @@ def nodecount(filepath: str):
     arr_tokens = np.array(tokens, dtype=object)
     arr_counts = np.array(counts, dtype=object)
     results = np.stack([arr_tokens, arr_counts])
-    return results.T
+    np.savetxt(filepath, results.T, fmt="%s", delimiter=',', newline='\n')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -53,5 +60,5 @@ if __name__ == '__main__':
     parent = str(Path(args.FILE).parent)
     file = str(Path(args.FILE).stem)
     output_path = parent + '/' + file + '_nodecount.csv'
-    
-    np.savetxt(output_path, nodecount(args.FILE), fmt="%s", delimiter=',', newline='\n')
+    trees = [tree for _, _, tree in read_parsedtree(args.FILE)]
+    nodecount(output_path, trees)
