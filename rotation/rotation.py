@@ -7,11 +7,12 @@ import argparse
 from pathlib import Path
 from typing import Dict, Optional
 
-from depccg.cat import Category, Functor, Atom
+from depccg.cat import Functor
 from depccg.tree import Tree
 from depccg.unification import Unification
 from depccg.printer.ja import ja_of
 from reader import read_parsedtree
+from clear_features import clear_features
 
 # all the original combinators in the Japanese CCGBank
 #   >, >B, >Bx1, >Bx2, >Bx3,
@@ -51,17 +52,6 @@ class TreeRotation(object):
 
     def forward(self, cat_symbol: str) -> bool:
         return (cat_symbol.startswith('>')) and ('x' not in cat_symbol)
-
-
-    def clear_features(self, cat: Category) -> Category:
-        if cat.is_functor:
-            return Functor(
-                self.clear_features(cat.left),
-                cat.slash,
-                self.clear_features(cat.right)
-            )
-        else:
-            return Atom(cat.base)
     
     
     def rotate(self, node: Tree) -> Tree:
@@ -148,7 +138,7 @@ class TreeRotation(object):
                                                     r.op_symbol)
                         elif (newl == None) and (new_order <= 2):
                             uni = Unification("a/b", "b/c")
-                            if uni(self.clear_features(a.cat),
+                            if uni(clear_features(a.cat),
                                    b.cat):  # ignore the features of a.cat in this momemt
                                 newl_cat = Functor(a.cat.left, "/", uni["c"])
                                 newl_string = self.order_to_forwardstring[new_order]
@@ -174,7 +164,7 @@ class TreeRotation(object):
                                             and (c.cat.right.base == 'NP')\
                                                 and (re.match(r'(\(*)NP', str(b.cat)) is not None):
                         uni = Unification("a/b", "b")
-                        if uni(self.clear_features(a.cat),
+                        if uni(clear_features(a.cat),
                                    b.cat):
                             newl_cat = a.cat.left
                             return Tree.make_binary(top.cat,
