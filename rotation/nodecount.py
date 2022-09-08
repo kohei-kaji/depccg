@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from typing import List, Tuple
+from typing import List
 
 import numpy as np
 from depccg.tree import Tree, Token
@@ -25,17 +25,23 @@ class NodeCount(object):
             self.counts.append(self.count)
             self.count += 1
 
-def nodecount(tree: Tree) -> Tuple[List[Token], List[int]]:
-    nd = NodeCount()
-    nd.traverse(tree)
-    nd.counts.append(nd.count)
-    tokens = [token['word'] for token in tree.tokens]
-    counts = [j-i for i,j in zip(nd.counts, nd.counts[1:])]
-    ##########################################################
-    ##### Tokenに'word'しかないかは未確認。
-    ##########################################################
-
-    return tokens, counts
+def nodecount(filepath: str):
+    trees = [tree for _, _, tree in read_parsedtree(filepath)]
+    tokens: List[Token] = []
+    counts: List[int] = []
+    for tree in trees:
+        nd = NodeCount()
+        nd.traverse(tree)
+        nd.counts.append(nd.count)
+        tokens += [token['word'] for token in tree.tokens]
+        counts += [j-i for i,j in zip(nd.counts, nd.counts[1:])]
+        ##########################################################
+        ##### Tokenに'word'しかないかは未確認。
+        ##########################################################
+    arr_tokens = np.array(tokens, dtype=object)
+    arr_counts = np.array(counts, dtype=object)
+    results = np.stack([arr_tokens, arr_counts])
+    return results.T
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -46,17 +52,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     parent = str(Path(args.FILE).parent)
     file = str(Path(args.FILE).stem)
-
-    trees = [tree for _, _, tree in read_parsedtree(args.FILE)]
     output_path = parent + '/' + file + '_nodecount.csv'
-
-    tokens = []
-    counts = []
-    for tree in trees:
-        node_count = nodecount(tree)
-        tokens += node_count[0]
-        counts += node_count[1]
-    arr_tokens = np.array(tokens, dtype=object)
-    arr_counts = np.array(counts, dtype=object)
-    results = np.stack([arr_tokens, arr_counts])
-    np.savetxt(output_path, results.T, fmt="%s", delimiter=',', newline='\n')
+    
+    np.savetxt(output_path, nodecount(args.FILE), fmt="%s", delimiter=',', newline='\n')
