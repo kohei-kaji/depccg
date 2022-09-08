@@ -9,35 +9,57 @@ from depccg.unification import Unification
 from depccg.printer.ja import ja_of
 
 from reader import read_parsedtree
+from clear_features import clear_features
+
+# When following verbs appear on the right of NPs, type-raise will be applied.
+one_arg: Functor = Category.parse(r"S/(S\NP)")
+two_args: Functor = Category.parse(r"(S\NP)/((S\NP)\NP)")
+three_args: Functor = Category.parse(r"((S\NP)\NP)/(((S\NP)\NP)\NP)")
+four_args: Functor = Category.parse(r"(((S\NP)\NP)\NP)/((((S\NP)\NP)\NP)\NP)")
+
+def typeraise(r:Functor) -> Functor:
+    vp = clear_features(r)
+    match vp:
+        case one_arg.right:
+            return one_arg
+        case two_args.right:
+            return two_args
+        case three_args.right:
+            return three_args
+        case four_args.right:
+            return four_args
+        case _:
+            raise Exception('The category is not assumed to be inputted.')
+
 
 class ApplyTypeRaise(object):
     def __init__(self, filepath: str) -> None:
         self.filepath = filepath
-        self.tr_rules: Dict[str, str] = {}  # Dict[right-node, type-raised left-node]
+        # self.tr_rules: Dict[str, str] = {}  # Dict[right-node, type-raised left-node]
+    
+    ####################################################
+    # - For rule-based type-raise with ternary features
+    #   - Now, features are ignored when type-raising.
+    ####################################################
+    
+    # def readdict(self, dictpath: str = '/Users/kako/depccg/rotation/trdict.txt'):
+    #     with open(dictpath, 'r') as f:
+    #         for line in f:
+    #             line = line.split()
+    #             self.tr_rules[line[0]] = line[1]
+    #     return self.tr_rules
+    
+    # def typeraise(self, x: Atom, y:Functor) -> Functor:
+    #     uni = Unification("a/b", "b")
+    #     tr: Functor = Category.parse(self.tr_rules[str(y)])
+    #     if uni(tr, y):
+    #         return tr
+    #     else:
+    #         raise Exception
 
-    def readdict(self, dictpath: str = '/Users/kako/depccg/rotation/trdict.txt'):
-        with open(dictpath, 'r') as f:
-            for line in f:
-                line = line.split()
-                self.tr_rules[line[0]] = line[1]
-        return self.tr_rules
 
-    # X -> T/(T\X)
-    def typeraise(self, x: Atom, y:Functor) -> Functor:
-        # results = [result for result in self.tr_rules[x.base]
-        # if Category.parse(result).right == y
-        # and x == Category.parse(result).right.right]
-        # return results[0]
-        uni = Unification("a/b", "b")
-        tr: Functor = Category.parse(self.tr_rules[str(y)])
-
-        if uni(tr, y):
-            return tr
-        else:
-            raise Exception
-
-
-    def apply_typeraise(self, tree: Tree) -> Tree:
+    @staticmethod
+    def apply_typeraise(tree: Tree) -> Tree:
         def _apply_typeraise(node: Tree) -> Tree:
             if node.is_leaf:
                 return Tree.make_terminal(node.token, node.cat)
@@ -49,8 +71,7 @@ class ApplyTypeRaise(object):
                 s = str(node.right_child.cat)
                 if re.match(r'(\(*)S', s) is not None and s.count('S') == 1:
                     return Tree.make_binary(node.cat,
-                                            Tree.make_unary(self.typeraise(node.left_child.cat,
-                                                                        node.right_child.cat),
+                                            Tree.make_unary(typeraise(node.right_child.cat),
                                                             _apply_typeraise(node.left_child),
                                                             'tr',
                                                             '>T'),
@@ -75,7 +96,7 @@ class ApplyTypeRaise(object):
     @staticmethod
     def create_typeraised_tree(args):
         self = ApplyTypeRaise(args.PATH)
-        self.readdict()
+        # self.readdict()
         
         parent = Path(self.filepath).parent
         textname = str(Path(self.filepath).stem) + '_typeraised'
@@ -96,16 +117,3 @@ if __name__ == '__main__':
     args = parser.parse_args()
     ApplyTypeRaise.create_typeraised_tree(args)
   
-
-
-#################################################
-# 新たに導入するtype raising rule群
-# 要検討
-# 素性指定をするべきか否か。
-# Atom.baseは、feature含めたstrでは？ -> 辞書はNPではなく、NP[case=ga, ...]で用意しなければ？
-# forward type-raisingのみのdictにする。
-
-# {key <- VP, value <- type-raised NP}
-# tr_rules: Dict[str, str] = {
-#     "S[mod=nm,form=da,fin=f]\NP[case=ga,mod=nm,fin=f]": "S[mod=X1,form=X2,fin=X3]/(S[mod=X1,form=X2,fin=X3]\NP[mod=X1,form=X2,fin=X3])",
-#     }
