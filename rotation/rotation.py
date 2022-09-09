@@ -19,12 +19,7 @@ from clear_features import clear_features
 #   <, <B1, <B2, <B3, <B4,
 #   ADV0, ADV1, ADV2, 
 #   ADNint, ADNext, SSEQ
-
-class TreeRotation(object):
-    def __init__(self, filepath: str):
-        self.filepath = filepath
-        
-        self.cat_to_order: Dict[str, int] = {
+cat_to_order: Dict[str, int] = {
             '>':0,
             '<':0,
             '>B':1,
@@ -35,37 +30,116 @@ class TreeRotation(object):
             '>Bx1':1,
             '>Bx2':2,
             '>Bx3':3
-            }
+}
         
-        self.order_to_forwardstring: Dict[int, str] = {
+order_to_forwardstring: Dict[int, str] = {
             0: 'fa',
             1: 'fc',
             2: 'fc2'
-        }
+}
         
-        self.order_to_forwardsymbol: Dict[int, str] = {
+order_to_forwardsymbol: Dict[int, str] = {
             0: '>',
             1: '>B',
             2: '>B2'
-        }
+}
         
 
-    def forward(self, cat_symbol: str) -> bool:
-        return (cat_symbol.startswith('>')) and ('x' not in cat_symbol)
-    
-    
-    def rotate(self, node: Tree) -> Tree:
+def forward(self, cat_symbol: str) -> bool:
+    return (cat_symbol.startswith('>')) and ('x' not in cat_symbol)
+
+
+def toLeftward(self, top: Tree) -> Tree:
+    if (top.is_unary == False) and (forward(top.op_symbol)):
+        a = top.left_child
+        right = top.right_child
+        def rebuild(x: int, r: Tree) -> Optional[Tree]:
+            if r.is_unary == False:  # if node is binary,
+                y = cat_to_order[r.op_symbol]
+                b, c = r.children
+                if (forward(r.op_symbol)) and (x >= y):
+                    new_order = x-y+1
+                    newl = rebuild(new_order, b)
+                    if isinstance(newl, Tree):
+                        return Tree.make_binary(top.cat,
+                                                newl,
+                                                c,
+                                                r.op_string,
+                                                r.op_symbol)
+                    elif (newl == None) and (new_order <= 2):
+                        uni = Unification("a/b", "b/c")
+                        if uni(clear_features(a.cat),
+                               b.cat):  # ignore the features of a.cat in this momemt
+                            newl_cat = Functor(a.cat.left, "/", uni["c"])
+                            newl_string = order_to_forwardstring[new_order]                                newl_symbol = self.order_to_forwardsymbol[new_order]
+                            return Tree.make_binary(top.cat,
+                                                    Tree.make_binary(newl_cat,
+                                                                    a,
+                                                                    b,
+                                                                    newl_string,
+                                                                    newl_symbol),
+                                                    c,
+                                                    r.op_string,
+                                                    r.op_symbol)
+                        else:
+                            return None
+                    else:
+                        return None
+                    
+                elif (top.op_symbol == '>')\
+                        and (r.op_symbol == '<')\
+                            and (a.cat.right.base == 'NP')\
+                                    and (c.cat.right.is_atomic)\
+                                        and (c.cat.right.base == 'NP')\
+                                            and (re.match(r'(\(*)NP', str(b.cat)) is not None):
+                    uni = Unification("a/b", "b")
+                    if uni(clear_features(a.cat),
+                               b.cat):
+                        newl_cat = a.cat.left
+                        return Tree.make_binary(top.cat,
+                                                Tree.make_binary(newl_cat,
+                                                                a,
+                                                                b,
+                                                                'fa',
+                                                                '>'),
+                                                c,
+                                                'ba',
+                                                '<')
+                    else:
+                        return None
+                else:
+                    return None
+            else:
+                return None
+
+        rebranch = rebuild(cat_to_order[top.op_string],
+                           right)
+            
+        if isinstance(rebranch, Tree):
+            return rebranch
+        else:
+            return top
+    else:
+        return top
+
+
+class TreeRotation(object):
+    def __init__(self, filepath: str):
+        self.filepath = filepath
+
+    @staticmethod
+    def rotate(node: Tree) -> Tree:
         if node.is_leaf:
             return node
         elif node.is_unary:
             return Tree.make_unary(node.cat,
-                                   self.rotate(node.child),
+                                   TreeRotation.rotate(node.child),
                                    node.op_string,
                                    node.op_symbol)
         else:  # if node is binary
-            return self.sinkForwardLeftward(Tree.make_binary(node.cat,
-                                                        self.rotate(node.left_child),
-                                                        self.rotate(node.right_child),
+            return toLeftward(Tree.make_binary(node.cat,
+                                                        TreeRotation.rotate(node.left_child),
+                                                        TreeRotation.rotate(node.right_child),
                                                         node.op_string,
                                                         node.op_symbol))
 
@@ -78,7 +152,7 @@ class TreeRotation(object):
     #          /  \                   /  \
     #         b    c                 a    b
     #
-    # sinkForwardLeftward :: [Tree(right-branch)] -> [Tree(left-branch)]
+    # toLeftward :: [Tree(right-branch)] -> [Tree(left-branch)]
     #   // implemented from bottom to up
     #
     # rebuild :: [x: int] -> [>By(b,c): Tree] -> [Optional[Tree]]
@@ -119,79 +193,6 @@ class TreeRotation(object):
     #           S/NP     NP\NP           S/S     S/NP
     ######################################################################
 
-    def sinkForwardLeftward(self, top: Tree) -> Tree:
-        if (top.is_unary == False) and (self.forward(top.op_symbol)):
-            a = top.left_child
-            right = top.right_child
-            def rebuild(x: int, r: Tree) -> Optional[Tree]:
-                if r.is_unary == False:  # if node is binary,
-                    y = self.cat_to_order[r.op_symbol]
-                    b, c = r.children
-                    if (self.forward(r.op_symbol)) and (x >= y):
-                        new_order = x-y+1
-                        newl = rebuild(new_order, b)
-                        if isinstance(newl, Tree):
-                            return Tree.make_binary(top.cat,
-                                                    newl,
-                                                    c,
-                                                    r.op_string,
-                                                    r.op_symbol)
-                        elif (newl == None) and (new_order <= 2):
-                            uni = Unification("a/b", "b/c")
-                            if uni(clear_features(a.cat),
-                                   b.cat):  # ignore the features of a.cat in this momemt
-                                newl_cat = Functor(a.cat.left, "/", uni["c"])
-                                newl_string = self.order_to_forwardstring[new_order]
-                                newl_symbol = self.order_to_forwardsymbol[new_order]
-                                return Tree.make_binary(top.cat,
-                                                        Tree.make_binary(newl_cat,
-                                                                        a,
-                                                                        b,
-                                                                        newl_string,
-                                                                        newl_symbol),
-                                                        c,
-                                                        r.op_string,
-                                                        r.op_symbol)
-                            else:
-                                return None
-                        else:
-                            return None
-
-                    elif (top.op_symbol == '>')\
-                            and (r.op_symbol == '<')\
-                                and (a.cat.right.base == 'NP')\
-                                        and (c.cat.right.is_atomic)\
-                                            and (c.cat.right.base == 'NP')\
-                                                and (re.match(r'(\(*)NP', str(b.cat)) is not None):
-                        uni = Unification("a/b", "b")
-                        if uni(clear_features(a.cat),
-                                   b.cat):
-                            newl_cat = a.cat.left
-                            return Tree.make_binary(top.cat,
-                                                    Tree.make_binary(newl_cat,
-                                                                    a,
-                                                                    b,
-                                                                    'fa',
-                                                                    '>'),
-                                                    c,
-                                                    'ba',
-                                                    '<')
-                        else:
-                            return None
-                    else:
-                        return None
-                else:
-                    return None
-
-            rebranch = rebuild(self.cat_to_order[top.op_string],
-                               right)
-            
-            if isinstance(rebranch, Tree):
-                return rebranch
-            else:
-                return top
-        else:
-            return top
     
     @staticmethod
     def create_rotated_tree(args):
