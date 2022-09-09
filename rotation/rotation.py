@@ -71,7 +71,8 @@ def toLeftward(self, top: Tree) -> Tree:
                         if uni(clear_features(a.cat),
                                b.cat):  # ignore the features of a.cat in this momemt
                             newl_cat = Functor(a.cat.left, "/", uni["c"])
-                            newl_string = order_to_forwardstring[new_order]                                newl_symbol = self.order_to_forwardsymbol[new_order]
+                            newl_string = order_to_forwardstring[new_order]
+                            newl_symbol = self.order_to_forwardsymbol[new_order]
                             return Tree.make_binary(top.cat,
                                                     Tree.make_binary(newl_cat,
                                                                     a,
