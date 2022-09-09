@@ -13,10 +13,11 @@ from pathlib import Path
 from depccg.tools.ja.reader import read_ccgbank
 
 from converter import ja_to_auto
+from depccg.tree import Tree
 from nodecount import nodecount
 from reader import read_parsedtree
-from rotation import TreeRotation
-from typeraise import ApplyTypeRaise
+from rotation import TreeRotation, 
+from typeraise import TypeRaise
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -38,11 +39,11 @@ if __name__ == '__main__':
         nd_name = directory_name + '_nodecount.csv'
         nodecount(nd_name, trees)
         
-        typeraised_trees = [ApplyTypeRaise.apply_typeraise(tree) for tree in trees]
+        typeraised_trees = [TypeRaise.apply_typeraise(tree) for tree in trees]
         tr_nd_name = directory_name + 'typeraised_nodecount.csv'
         nodecount(tr_nd_name, typeraised_trees)
         
-        treerotation = TreeRotation()
+        leftbranched_trees = [TreeRotation.rotate(tree) for tree in trees]
         
         
         
