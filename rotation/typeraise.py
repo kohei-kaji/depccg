@@ -32,7 +32,7 @@ def typeraise(r:Functor) -> Functor:
             raise Exception('The category is not assumed to be inputted.')
 
 
-class ApplyTypeRaise(object):
+class TypeRaise(object):
     def __init__(self, filepath: str) -> None:
         self.filepath = filepath
         # self.tr_rules: Dict[str, str] = {}  # Dict[right-node, type-raised left-node]
@@ -95,7 +95,7 @@ class ApplyTypeRaise(object):
 
     @staticmethod
     def create_typeraised_tree(args):
-        self = ApplyTypeRaise(args.PATH)
+        self = TypeRaise(args.PATH)
         # self.readdict()
         
         parent = Path(self.filepath).parent
@@ -115,5 +115,5 @@ if __name__ == '__main__':
                         help='path to the file of the Japanese CCG derivations parsed by depccg')
     
     args = parser.parse_args()
-    ApplyTypeRaise.create_typeraised_tree(args)
+    TypeRaise.create_typeraised_tree(args)
   
