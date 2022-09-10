@@ -12,7 +12,7 @@ from depccg.tree import Tree
 from depccg.unification import Unification
 from depccg.printer.ja import ja_of
 
-from reader import read_parsedtree
+from parsed_reader import read_parsedtree
 from clear_features import clear_features
 
 # all the original combinators in the Japanese CCGBank
@@ -104,7 +104,7 @@ def toLeftward(top: Tree) -> Tree:
         a = top.left_child
         right = top.right_child
         def rebuild(x: int, r: Tree) -> Optional[Tree]:
-            if r.is_unary == False:  # if node is binary,
+            if (r.is_unary == False) and (r.op_symbol != 'SSEQ'):  # if node is binary and is not conjunction,
                 y = cat_to_order[r.op_symbol]
                 b, c = r.children
                 if (forward(r.op_symbol)) and (x >= y):
@@ -163,7 +163,7 @@ def toLeftward(top: Tree) -> Tree:
             else:
                 return None
 
-        rebranch = rebuild(cat_to_order[top.op_string],
+        rebranch = rebuild(cat_to_order[top.op_symbol],
                            right)
 
         if isinstance(rebranch, Tree):
