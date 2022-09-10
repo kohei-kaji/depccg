@@ -42,7 +42,7 @@ if __name__ == '__main__':
         tr_nc_name = directory_name + '/typeraised.csv'
         nodecount(tr_nc_name, typeraised_trees)
 
-        leftbranched_trees = [TreeRotation.rotate(tree) for tree in trees]
+        leftbranched_trees = [TreeRotation.rotate(tree) for tree in typeraised_trees]
         lb_nd_name = directory_name + '/leftbranched.csv'
         nodecount(lb_nd_name, leftbranched_trees)
 
@@ -60,6 +60,6 @@ if __name__ == '__main__':
         tr_auto_name = directory_name + '/typeraised'
         ja_to_auto(tr_auto_name, typeraised_trees)
 
-        leftbranched_trees = [TreeRotation.rotate(tree) for tree in trees]
+        leftbranched_trees = [TreeRotation.rotate(tree) for tree in typeraised_trees]
         lb_auto_name = directory_name + '/leftbranched'
         ja_to_auto(lb_auto_name, leftbranched_trees)
