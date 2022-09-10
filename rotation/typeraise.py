@@ -1,11 +1,11 @@
 import re
 import argparse
-from typing import Dict
+# from typing import Dict
 from pathlib import Path
 
-from depccg.cat import Category, Atom, Functor
+from depccg.cat import Category, Functor
 from depccg.tree import Tree
-from depccg.unification import Unification
+# from depccg.unification import Unification
 from depccg.printer.ja import ja_of
 
 from reader import read_parsedtree
@@ -42,7 +42,7 @@ class TypeRaise(object):
     #   - Now, features are ignored when type-raising.
     ####################################################
     
-    # def readdict(self, dictpath: str = '/Users/kako/depccg/rotation/trdict.txt'):
+    # def readdict(self, dictpath: str):
     #     with open(dictpath, 'r') as f:
     #         for line in f:
     #             line = line.split()
@@ -96,7 +96,7 @@ class TypeRaise(object):
     @staticmethod
     def create_typeraised_tree(args):
         self = TypeRaise(args.PATH)
-        # self.readdict()
+        # self.readdict(dictpath)
         
         parent = Path(self.filepath).parent
         textname = str(Path(self.filepath).stem) + '_typeraised'
