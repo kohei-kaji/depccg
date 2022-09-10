@@ -1,0 +1,110 @@
+# In Japanese CCGBank op_string is not used, so the name of a variable should be 'op_symbol'.
+# Following original reader.py, combinators (op_symbols) are loaded with an unnecessary brace ('{').
+# As this brace may be mistaken for the start of a constituent, an unnecessary brace must be discarded.
+# I have not specified the cause of this problem, but I added some code to discard all the braces in op_symbol.
+
+
+from typing import Iterator, List, Tuple
+# import re
+
+from depccg.cat import Category
+from depccg.tree import Tree
+from depccg.types import Token
+from depccg.tools.reader import ReaderResult
+
+
+# >T combinator is added
+combinators = {
+    'SSEQ', '>', '<', '>B', '<B1', '<B2', '<B3',
+    '<B4', '>Bx1', '>Bx2', '>Bx3',
+    'ADNext', 'ADNint', 'ADV0', 'ADV1', 'ADV2', '>T'
+}
+
+# DEPENDENCY = re.compile(r'{.+?}')
+
+
+def read_parsedtree(filepath: str) -> Iterator[ReaderResult]:
+    """read the file of the Japanese CCG derivations parsed by depccg.
+
+    Args:
+        filename (str): file name string
+
+    Yields:
+        Iterator[ReaderResult]: iterator object containing parse results
+    """
+
+    for i, line in enumerate(open(filepath)):
+        line = line.strip()
+        if len(line) == 0:
+            continue
+        tree, tokens = ParsedJaCCGLineReader(line).parse()
+        yield ReaderResult(str(i), tokens, tree)
+
+
+class ParsedJaCCGLineReader(object):
+    def __init__(self, line: str) -> None:
+        self.line = line
+        self.index = 0
+        self.word_id = -1
+        self.tokens = []
+
+    def next(self, target: str) -> str:
+        end = self.line.find(target, self.index)
+        result = self.line[self.index:end]
+        self.index = end + 1
+        return result
+
+    def check(self, text: str, offset: int = 0) -> None:
+        if self.line[self.index + offset] != text:
+            raise RuntimeError('AutoLineReader.check catches parse error')
+
+    def peek(self) -> str:
+        return self.line[self.index]
+
+    def parse(self) -> Tuple[Tree, List[Token]]:
+        result = self.next_node()
+        return result, self.tokens
+
+    @property
+    def next_node(self):
+        end = self.line.find(' ', self.index)
+        if self.line[self.index + 1:end] in combinators:
+            return self.parse_tree
+        else:
+            return self.parse_leaf
+
+    def parse_leaf(self) -> Tree:
+        self.word_id += 1
+        self.check('{')
+        cat = self.next(' ')[1:]
+        # cat = cat[:cat.find('_')]
+        # cat = DEPENDENCY.sub('', cat)
+        cat = Category.parse(cat)
+        surf, base, pos1, pos2 = self.next('}')[:-1].split('/')
+        token = Token(surf=surf, base=base, pos1=pos1, pos2=pos2)
+        self.tokens.append(token)
+        return Tree.make_terminal(surf, cat)
+
+    def parse_tree(self) -> Tree:
+        self.check('{')
+        op_symbol = self.next(' ')
+        # cat = DEPENDENCY.sub('', self.next(' '))
+        cat = self.next(' ')
+        cat = Category.parse(cat)
+        self.check('{')
+
+        children = []
+        while self.peek() != '}':
+            children.append(self.next_node())
+            if self.peek() == ' ':
+                self.next(' ')
+
+        self.next('}')
+
+        if len(children) == 1:
+            return Tree.make_unary(cat, children[0], op_symbol.replace("{", ""), op_symbol.replace("{", ""))
+        else:
+            assert len(
+                children) == 2, f'failed to parse, invalid number of children: {self.line}'
+            left, right = children
+            return Tree.make_binary(cat, left, right, op_symbol.replace("{", ""), op_symbol.replace("{", ""))
