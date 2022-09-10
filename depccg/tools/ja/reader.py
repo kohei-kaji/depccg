@@ -80,7 +80,7 @@ class _JaCCGLineReader(object):
 
     def parse_tree(self) -> Tree:
         self.check('{')
-        op_string = self.next(' ')
+        op_symbol = self.next(' ')
         cat = DEPENDENCY.sub('', self.next(' '))
         cat = Category.parse(cat)
         self.check('{')
@@ -94,9 +94,9 @@ class _JaCCGLineReader(object):
         self.next('}')
 
         if len(children) == 1:
-            return Tree.make_unary(cat, children[0], op_string, op_string)
+            return Tree.make_unary(cat, children[0], op_symbol.replace("{", ""), op_symbol.replace("{", ""))
         else:
             assert len(
                 children) == 2, f'failed to parse, invalid number of children: {self.line}'
             left, right = children
-            return Tree.make_binary(cat, left, right, op_string, op_string)
+            return Tree.make_binary(cat, left, right, op_symbol.replace("{", ""), op_symbol.replace("{", ""))
