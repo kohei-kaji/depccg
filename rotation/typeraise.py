@@ -1,11 +1,9 @@
 import re
 import argparse
-# from typing import Dict
 from pathlib import Path
 
 from depccg.cat import Category, Functor
 from depccg.tree import Tree
-# from depccg.unification import Unification
 from depccg.printer.ja import ja_of
 
 from reader import read_parsedtree
@@ -29,33 +27,12 @@ def typeraise(r:Functor) -> Functor:
         case four_args.right:
             return four_args
         case _:
-            raise Exception('The category is not assumed to be inputted.')
+            raise Exception('This category is not assumed to be inputted.')
 
 
 class TypeRaise(object):
     def __init__(self, filepath: str) -> None:
         self.filepath = filepath
-        # self.tr_rules: Dict[str, str] = {}  # Dict[right-node, type-raised left-node]
-    
-    ####################################################
-    # - For rule-based type-raise with ternary features
-    #   - Now, features are ignored when type-raising.
-    ####################################################
-    
-    # def readdict(self, dictpath: str):
-    #     with open(dictpath, 'r') as f:
-    #         for line in f:
-    #             line = line.split()
-    #             self.tr_rules[line[0]] = line[1]
-    #     return self.tr_rules
-    
-    # def typeraise(self, x: Atom, y:Functor) -> Functor:
-    #     uni = Unification("a/b", "b")
-    #     tr: Functor = Category.parse(self.tr_rules[str(y)])
-    #     if uni(tr, y):
-    #         return tr
-    #     else:
-    #         raise Exception
 
 
     @staticmethod
@@ -67,9 +44,12 @@ class TypeRaise(object):
                 return Tree.make_unary(node.cat,
                                     _apply_typeraise(node.child),
                                     node.op_string, node.op_symbol)
-            elif node.left_child.cat.is_atomic and node.left_child.cat.base == 'NP' and node.right_child.cat.is_functor:
+            elif node.left_child.cat.is_atomic\
+                and node.left_child.cat.base == 'NP'\
+                    and node.right_child.cat.is_functor:
                 s = str(node.right_child.cat)
-                if re.match(r'(\(*)S', s) is not None and s.count('S') == 1:
+                if s.count('S') == 1\
+                    and re.match(r'(\(*)S', s) is not None:
                     return Tree.make_binary(node.cat,
                                             Tree.make_unary(typeraise(node.right_child.cat),
                                                             _apply_typeraise(node.left_child),
@@ -96,8 +76,7 @@ class TypeRaise(object):
     @staticmethod
     def create_typeraised_tree(args):
         self = TypeRaise(args.PATH)
-        # self.readdict(dictpath)
-        
+
         parent = Path(self.filepath).parent
         textname = str(Path(self.filepath).stem) + '_typeraised'
         trees = [tree for _, _, tree in read_parsedtree(self.filepath)]
@@ -113,7 +92,6 @@ if __name__ == '__main__':
     parser.add_argument('PATH',
                         type=Path,
                         help='path to the file of the Japanese CCG derivations parsed by depccg')
-    
+
     args = parser.parse_args()
     TypeRaise.create_typeraised_tree(args)
-  

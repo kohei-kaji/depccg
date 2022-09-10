@@ -42,9 +42,7 @@ def nodecount(filepath: str, trees: List[Tree]):
         nd.counts.append(nd.count)
         tokens += [token['word'] for token in tree.tokens]
         counts += [j-i for i,j in zip(nd.counts, nd.counts[1:])]
-        ##########################################################
-        ##### Tokenに'word'しかないかは未確認。
-        ##########################################################
+
     arr_tokens = np.array(tokens, dtype=object)
     arr_counts = np.array(counts, dtype=object)
     results = np.stack([arr_tokens, arr_counts])

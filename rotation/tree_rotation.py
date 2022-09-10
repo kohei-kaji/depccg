@@ -18,7 +18,7 @@ from clear_features import clear_features
 # all the original combinators in the Japanese CCGBank
 #   >, >B, >Bx1, >Bx2, >Bx3,
 #   <, <B1, <B2, <B3, <B4,
-#   ADV0, ADV1, ADV2, 
+#   ADV0, ADV1, ADV2,
 #   ADNint, ADNext, SSEQ
 cat_to_order: Dict[str, int] = {
             '>':0,
@@ -32,19 +32,19 @@ cat_to_order: Dict[str, int] = {
             '>Bx2':2,
             '>Bx3':3
 }
-        
+
 order_to_forwardstring: Dict[int, str] = {
             0: 'fa',
             1: 'fc',
             2: 'fc2'
 }
-        
+
 order_to_forwardsymbol: Dict[int, str] = {
             0: '>',
             1: '>B',
             2: '>B2'
 }
-        
+
 
 def forward(cat_symbol: str) -> bool:
     return (cat_symbol.startswith('>')) and ('x' not in cat_symbol)
@@ -136,7 +136,7 @@ def toLeftward(top: Tree) -> Tree:
                             return None
                     else:
                         return None
-                    
+
                 elif (top.op_symbol == '>')\
                         and (r.op_symbol == '<')\
                             and (a.cat.right.base == 'NP')\
@@ -165,7 +165,7 @@ def toLeftward(top: Tree) -> Tree:
 
         rebranch = rebuild(cat_to_order[top.op_string],
                            right)
-            
+
         if isinstance(rebranch, Tree):
             return rebranch
         else:
@@ -194,7 +194,7 @@ class TreeRotation(object):
                                                         node.op_string,
                                                         node.op_symbol))
 
-    
+
     @staticmethod
     def create_rotated_tree(args):
         self = TreeRotation(args.PATH)
@@ -213,6 +213,6 @@ if __name__ == '__main__':
     parser.add_argument('PATH',
                         type=Path,
                         help='path to the file of the type-raised Japanese CCG derivations')
-    
+
     args = parser.parse_args()
     TreeRotation.create_rotated_tree(args)
