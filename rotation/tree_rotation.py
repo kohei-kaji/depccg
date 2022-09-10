@@ -11,6 +11,7 @@ from depccg.cat import Functor
 from depccg.tree import Tree
 from depccg.unification import Unification
 from depccg.printer.ja import ja_of
+
 from reader import read_parsedtree
 from clear_features import clear_features
 
@@ -45,11 +46,11 @@ order_to_forwardsymbol: Dict[int, str] = {
 }
         
 
-def forward(self, cat_symbol: str) -> bool:
+def forward(cat_symbol: str) -> bool:
     return (cat_symbol.startswith('>')) and ('x' not in cat_symbol)
 
 
-def toLeftward(self, top: Tree) -> Tree:
+def toLeftward(top: Tree) -> Tree:
     if (top.is_unary == False) and (forward(top.op_symbol)):
         a = top.left_child
         right = top.right_child
@@ -72,7 +73,7 @@ def toLeftward(self, top: Tree) -> Tree:
                                b.cat):  # ignore the features of a.cat in this momemt
                             newl_cat = Functor(a.cat.left, "/", uni["c"])
                             newl_string = order_to_forwardstring[new_order]
-                            newl_symbol = self.order_to_forwardsymbol[new_order]
+                            newl_symbol = order_to_forwardsymbol[new_order]
                             return Tree.make_binary(top.cat,
                                                     Tree.make_binary(newl_cat,
                                                                     a,
