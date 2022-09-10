@@ -10,11 +10,10 @@ import shutil
 import argparse
 from pathlib import Path
 
-from depccg.tools.ja.reader import read_ccgbank
-
 from converter import ja_to_auto
 from nodecount import nodecount
-from reader import read_parsedtree
+from parsed_reader import read_parsedtree
+from ccgbank_reader import read_ccgbank
 from typeraise import TypeRaise
 from tree_rotation import TreeRotation
 

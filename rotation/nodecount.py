@@ -4,7 +4,7 @@ from typing import List
 
 import numpy as np
 from depccg.tree import Tree, Token
-from reader import read_parsedtree
+from parsed_reader import read_parsedtree
 
 class NodeCount(object):
     def __init__(self):

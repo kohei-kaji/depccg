@@ -10,7 +10,7 @@ from depccg.tree import Tree
 from depccg.unification import Unification
 from depccg.printer.ja import ja_of
 
-from reader import read_parsedtree
+from parsed_reader import read_parsedtree
 
 class ApplyTypeRaise(object):
     def __init__(self, filepath: str) -> None:

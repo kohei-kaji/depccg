@@ -2,13 +2,13 @@ import argparse
 from typing import List
 
 from depccg.utils import denormalize
-from depccg.tools.ja.reader import read_ccgbank
 from depccg.printer.html import _MATHML_MAIN, _mathml_subtree
 from pathlib import Path
 from depccg.tree import Tree
 
 from clear_features import clear_features
-from reader import read_parsedtree
+from ccgbank_reader import read_ccgbank
+from parsed_reader import read_parsedtree
 
 # rewrite auto_of (depccg/printer/auto.py)
 def featureless_auto_of(tree: Tree) -> str:

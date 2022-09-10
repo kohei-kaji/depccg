@@ -6,7 +6,7 @@ from depccg.cat import Category, Functor
 from depccg.tree import Tree
 from depccg.printer.ja import ja_of
 
-from reader import read_parsedtree
+from parsed_reader import read_parsedtree
 from clear_features import clear_features
 
 # When following verbs appear on the right of NPs, type-raise will be applied.
