@@ -50,6 +50,55 @@ def forward(cat_symbol: str) -> bool:
     return (cat_symbol.startswith('>')) and ('x' not in cat_symbol)
 
 
+######################################################################
+#       >Bx                         >By
+#       /  \      (if x ≥ y)        /  \
+#      a   >By        =>      >B(x-y+1) c
+#          /  \                   /  \
+#         b    c                 a    b
+#
+# toLeftward :: [Tree(right-branch)] -> [Tree(left-branch)]
+#   // implemented from bottom to up
+#
+# rebuild :: [x: int] -> [>By(b,c): Tree] -> [Optional[Tree]]
+#
+#
+#
+# - Common rotation examples.
+# (1)
+#          >B0:S                                  　>B0:S
+#        /       \                                /      \
+#  S/(S\NP)    >B0:S\NP        =>      >B1:S/(S\NP\NP)   S\NP\NP
+#             /       \                      /      \
+#  (S\NP)/(S\NP\NP)  S\NP\NP           S/(S\NP)   (S\NP)/(S\NP\NP)
+#
+# (2)
+#          >B0:NP                            >B0:NP
+#        /       \                          /      \
+#     NP/NP    >B0:NP          =>      >B1:NP/NP    NP
+#             /       \                 /      \
+#           NP/NP     NP             NP/NP    NP/NP
+#
+#
+#
+# - forward, backward混在型, crossed composition混じりは未対応
+#   - crossed composition混じりが現れうるかについては未確認。
+# (3)
+#          >B0:NP                            <B0:NP
+#         /      \                           /     \
+#     NP/NP    <B0:NP        =>           >B0:NP   NP\NP
+#             /      \                   /     \
+#            NP     NP\NP              NP/NP    NP
+#
+# (4)
+#        >Bx1:S/NP                          >Bx1:S/NP
+#        /       \                           /      \
+#      S/S   >Bx1:S/NP          =>      >B1:S/NP   NP\NP
+#             /       \                /      \
+#           S/NP     NP\NP           S/S     S/NP
+######################################################################
+
+
 def toLeftward(top: Tree) -> Tree:
     if (top.is_unary == False) and (forward(top.op_symbol)):
         a = top.left_child
@@ -144,56 +193,6 @@ class TreeRotation(object):
                                                         TreeRotation.rotate(node.right_child),
                                                         node.op_string,
                                                         node.op_symbol))
-
-
-
-    ######################################################################
-    #       >Bx                         >By
-    #       /  \      (if x ≥ y)        /  \
-    #      a   >By        =>      >B(x-y+1) c
-    #          /  \                   /  \
-    #         b    c                 a    b
-    #
-    # toLeftward :: [Tree(right-branch)] -> [Tree(left-branch)]
-    #   // implemented from bottom to up
-    #
-    # rebuild :: [x: int] -> [>By(b,c): Tree] -> [Optional[Tree]]
-    #
-    #
-    #
-    # - Common rotation examples.
-    # (1)
-    #          >B0:S                                  　>B0:S
-    #        /       \                                /      \
-    #  S/(S\NP)    >B0:S\NP        =>      >B1:S/(S\NP\NP)   S\NP\NP
-    #             /       \                      /      \
-    #  (S\NP)/(S\NP\NP)  S\NP\NP           S/(S\NP)   (S\NP)/(S\NP\NP)
-    #
-    # (2)
-    #          >B0:NP                            >B0:NP
-    #        /       \                          /      \
-    #     NP/NP    >B0:NP          =>      >B1:NP/NP    NP
-    #             /       \                 /      \
-    #           NP/NP     NP             NP/NP    NP/NP
-    #
-    #
-    #
-    # - forward, backward混在型, crossed composition混じりは未対応
-    #   - crossed composition混じりが現れうるかについては未確認。
-    # (3)
-    #          >B0:NP                            <B0:NP
-    #         /      \                           /     \
-    #     NP/NP    <B0:NP        =>           >B0:NP   NP\NP
-    #             /      \                   /     \
-    #            NP     NP\NP              NP/NP    NP
-    #
-    # (4)
-    #        >Bx1:S/NP                          >Bx1:S/NP
-    #        /       \                           /      \
-    #      S/S   >Bx1:S/NP          =>      >B1:S/NP   NP\NP
-    #             /       \                /      \
-    #           S/NP     NP\NP           S/S     S/NP
-    ######################################################################
 
     
     @staticmethod
