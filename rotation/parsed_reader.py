@@ -40,6 +40,13 @@ def read_parsedtree(filepath: str) -> Iterator[ReaderResult]:
         tree, tokens = ParsedJaCCGLineReader(line).parse()
         yield ReaderResult(str(i), tokens, tree)
 
+def read_parsedstring(strings: List[str]) -> List[Tree]:
+    results = []
+    for line in strings:
+        tree, _ = ParsedJaCCGLineReader(line).parse()
+        results.append(tree)
+    return results
+
 
 class ParsedJaCCGLineReader(object):
     def __init__(self, line: str) -> None:
