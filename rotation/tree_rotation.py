@@ -139,7 +139,8 @@ def toLeftward(top: Tree) -> Tree:
 
                 elif (top.op_symbol == '>')\
                         and (r.op_symbol == '<')\
-                            and (a.cat.right.base == 'NP')\
+                            and a.cat.is_functor\
+                                and (a.cat.right.base == 'NP')\
                                     and (c.cat.right.is_atomic)\
                                         and (c.cat.right.base == 'NP')\
                                             and (re.match(r'(\(*)NP', str(b.cat)) is not None):
@@ -200,7 +201,7 @@ class TreeRotation(object):
         self = TreeRotation(args.PATH)
 
         parent = Path(self.filepath).parent
-        textname = str(Path(self.filepath).stem) + '_leftbranched'
+        textname = str(Path(self.filepath).stem) + '_leftbranched.txt'
         trees = [tree for _, _, tree in read_parsedtree(self.filepath)]
         with open(parent / textname, 'w') as f:
             for tree in trees:
