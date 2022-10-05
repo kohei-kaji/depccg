@@ -14,6 +14,7 @@ from depccg.tools.reader import ReaderResult
 
 
 # >T combinator is added
+# <Bx1 is not assumed
 combinators = {
     'SSEQ', '>', '<', '>B', '<B1', '<B2', '<B3',
     '<B4', '>Bx1', '>Bx2', '>Bx3',
