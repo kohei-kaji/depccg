@@ -45,9 +45,25 @@ order_to_forwardsymbol: Dict[int, str] = {
             2: '>B2'
 }
 
+order_to_backwardstring: Dict[int, str] = {
+            0: 'ba',
+}
+
+order_to_backwardsymbol: Dict[int, str] = {
+            0: 'ba',
+}
 
 def forward(cat_symbol: str) -> bool:
     return (cat_symbol.startswith('>')) and ('x' not in cat_symbol)
+
+def backward(cat_symbol: str) -> bool:
+    return (cat_symbol.startswith('<')) and ('x' not in cat_symbol)
+
+def cross_forward(cat_symbol: str) -> bool:
+    return (cat_symbol.startswith('>')) and ('x' in cat_symbol)
+
+def cross_backward(cat_symbol: str) -> bool:
+    return (cat_symbol.startswith('<')) and ('x' in cat_symbol)
 
 
 ######################################################################
@@ -91,6 +107,13 @@ def forward(cat_symbol: str) -> bool:
 #            NP     NP\NP              NP/NP    NP
 #
 # (4)
+#          >B0:S                            <B0:S
+#         /      \                         /     \
+#       S/S    <B0:S        =>         >B0:S     S\S
+#             /      \                 /     \
+#            S       S\S             S/S      S
+#
+# (4)
 #        >Bx1:S/NP                          >Bx1:S/NP
 #        /       \                           /      \
 #      S/S   >Bx1:S/NP          =>      >B1:S/NP   NP\NP
@@ -100,35 +123,105 @@ def forward(cat_symbol: str) -> bool:
 
 
 def toLeftward(top: Tree) -> Tree:
+    # Variables are named as follow;
+    #            >Bx: top                         >By: top
+    #             /     \                         /       \
+    #            a   >By: right   =>  >B(x-y+1): newleft   c
+    #                  /     \            /         \
+    #                 b       c          a           b
     if (top.is_unary == False) and (forward(top.op_symbol)):
         a = top.left_child
         right = top.right_child
+        # def rebuild(x: int, r: Tree) -> Optional[Tree]:
+        #     if (r.is_unary == False) and (r.op_symbol != 'SSEQ'):  # if node is binary and is not conjunction,
+        #         y = cat_to_order[r.op_symbol]
+        #         b, c = r.children
+        #         if (forward(r.op_symbol)) and (x >= y):
+        #             new_order = x-y+1
+        #             newleft = rebuild(new_order, b)
+        #             if isinstance(newleft, Tree):
+        #                 return Tree.make_binary(top.cat,
+        #                                         newleft,
+        #                                         c,
+        #                                         r.op_string,
+        #                                         r.op_symbol)
+        #             elif (newleft == None) and (new_order <= 2):
+        #                 uni = Unification("a/b", "b/c")
+        #                 if uni(clear_features(a.cat),
+        #                        b.cat):  # ignore the features of a.cat in this momemt
+        #                     newleft_cat = Functor(a.cat.left, "/", uni["c"])
+        #                     newleft_string = order_to_forwardstring[new_order]
+        #                     newleft_symbol = order_to_forwardsymbol[new_order]
+        #                     return Tree.make_binary(top.cat,
+        #                                             Tree.make_binary(newleft_cat,
+        #                                                             a,
+        #                                                             b,
+        #                                                             newleft_string,
+        #                                                             newleft_symbol),
+        #                                             c,
+        #                                             r.op_string,
+        #                                             r.op_symbol)
+        #                 else:
+        #                     return None
+        #             else:
+        #                 return None
+
+        #         elif (top.op_symbol == '>')\
+        #                 and (r.op_symbol == '<')\
+        #                     and a.cat.is_functor\
+        #                         and (a.cat.right.base == 'NP')\
+        #                             and (c.cat.right.is_atomic)\
+        #                                 and (c.cat.right.base == 'NP')\
+        #                                     and (re.match(r'(\(*)NP', str(b.cat)) is not None):
+        #             uni = Unification("a/b", "b")
+        #             if uni(clear_features(a.cat),
+        #                        b.cat):
+        #                 newleft_cat = a.cat.left
+        #                 return Tree.make_binary(top.cat,
+        #                                         Tree.make_binary(newleft_cat,
+        #                                                         a,
+        #                                                         b,
+        #                                                         'fa',
+        #                                                         '>'),
+        #                                         c,
+        #                                         'ba',
+        #                                         '<')
+        #             else:
+        #                 return None
+        #         else:
+        #             return None
+        #     else:
+        #         return None
+
+        # rebranch = rebuild(cat_to_order[top.op_symbol],
+        #                    right)
+
         def rebuild(x: int, r: Tree) -> Optional[Tree]:
             if (r.is_unary == False) and (r.op_symbol != 'SSEQ'):  # if node is binary and is not conjunction,
                 y = cat_to_order[r.op_symbol]
                 b, c = r.children
                 if (forward(r.op_symbol)) and (x >= y):
                     new_order = x-y+1
-                    newl = rebuild(new_order, b)
-                    if isinstance(newl, Tree):
+                    newleft = rebuild(new_order, b)
+                    if isinstance(newleft, Tree):
                         return Tree.make_binary(top.cat,
-                                                newl,
+                                                newleft,
                                                 c,
                                                 r.op_string,
                                                 r.op_symbol)
-                    elif (newl == None) and (new_order <= 2):
+                    elif (newleft == None) and (new_order <= 2):
                         uni = Unification("a/b", "b/c")
                         if uni(clear_features(a.cat),
                                b.cat):  # ignore the features of a.cat in this momemt
-                            newl_cat = Functor(a.cat.left, "/", uni["c"])
-                            newl_string = order_to_forwardstring[new_order]
-                            newl_symbol = order_to_forwardsymbol[new_order]
+                            newleft_cat = Functor(a.cat.left, "/", uni["c"])
+                            newleft_string = order_to_forwardstring[new_order]
+                            newleft_symbol = order_to_forwardsymbol[new_order]
                             return Tree.make_binary(top.cat,
-                                                    Tree.make_binary(newl_cat,
+                                                    Tree.make_binary(newleft_cat,
                                                                     a,
                                                                     b,
-                                                                    newl_string,
-                                                                    newl_symbol),
+                                                                    newleft_string,
+                                                                    newleft_symbol),
                                                     c,
                                                     r.op_string,
                                                     r.op_symbol)
@@ -147,9 +240,9 @@ def toLeftward(top: Tree) -> Tree:
                     uni = Unification("a/b", "b")
                     if uni(clear_features(a.cat),
                                b.cat):
-                        newl_cat = a.cat.left
+                        newleft_cat = a.cat.left
                         return Tree.make_binary(top.cat,
-                                                Tree.make_binary(newl_cat,
+                                                Tree.make_binary(newleft_cat,
                                                                 a,
                                                                 b,
                                                                 'fa',
