@@ -3,6 +3,7 @@ from typing import List
 
 from depccg.utils import denormalize
 from depccg.printer.html import _MATHML_MAIN, _mathml_subtree
+from depccg.printer.ja import ja_of
 from pathlib import Path
 from depccg.tree import Tree
 
@@ -37,7 +38,7 @@ def featureless_auto_of(tree: Tree) -> str:
 
     return rec(tree)
 
-def ja_to_auto(output_path: str, trees: List[Tree]):
+def trees_to_auto(output_path: str, trees: List[Tree]):
     """rewrite Japanese CCGBank with English CCGBank format.
 
     Args:
@@ -70,6 +71,12 @@ def ja_to_html(output_path: str, trees: List[Tree]):
             f.write(_MATHML_MAIN.format(result))
             f.write('\n')
 
+def trees_to_ja(output_path: str, trees: List[Tree]):
+    with open(output_path, 'w') as f:
+        for tree in trees:
+            f.write(ja_of(tree))
+            f.write('\n')
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -89,7 +96,7 @@ if __name__ == '__main__':
         trees = [tree for _, _, tree in read_parsedtree(args.FILE)]
         if args.output == 'auto':
             output_name = parent + '/' + file + '_auto'
-            ja_to_auto(output_name, trees)
+            trees_to_auto(output_name, trees)
         else:
             output_name = parent + '/' + file + '.html'
             ja_to_html(output_name, trees)
@@ -98,7 +105,7 @@ if __name__ == '__main__':
         trees = [tree for _, _, tree in read_ccgbank(args.FILE)]
         if args.output == 'auto':
             output_name = parent + '/' + file + '_auto'
-            ja_to_auto(output_name, trees)
+            trees_to_auto(output_name, trees)
         else:
             output_name = parent + '/' + file + '.html'
             ja_to_html(output_name, trees)
