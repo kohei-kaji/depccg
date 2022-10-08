@@ -1,13 +1,12 @@
-# from depccg.tools.ja.reader
-
-from typing import Iterator, List, Tuple
 import re
+from typing import Iterator, List, Tuple
 
 from depccg.cat import Category
 from depccg.tree import Tree
 from depccg.types import Token
 from depccg.tools.reader import ReaderResult
 
+from clear_features import clear_features
 
 combinators = {
     'SSEQ', '>', '<', '>B', '<B1', '<B2', '<B3',
@@ -17,7 +16,7 @@ combinators = {
 
 DEPENDENCY = re.compile(r'{.+?}')
 
-
+# read CCGBank without features
 def read_ccgbank(filepath: str) -> Iterator[ReaderResult]:
     """read Japanase CCGBank file.
 
@@ -75,6 +74,7 @@ class _JaCCGLineReader(object):
         cat = cat[:cat.find('_')]
         cat = DEPENDENCY.sub('', cat)
         cat = Category.parse(cat)
+        cat = clear_features(cat)
         surf, base, pos1, pos2 = self.next('}')[:-1].split('/')
         token = Token(surf=surf, base=base, pos1=pos1, pos2=pos2)
         self.tokens.append(token)
@@ -85,6 +85,7 @@ class _JaCCGLineReader(object):
         op_symbol = self.next(' ')
         cat = DEPENDENCY.sub('', self.next(' '))
         cat = Category.parse(cat)
+        cat = clear_features(cat)
         self.check('{')
 
         children = []
