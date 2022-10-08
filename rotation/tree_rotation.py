@@ -7,7 +7,7 @@ import argparse
 from pathlib import Path
 from typing import Dict, Optional
 
-from depccg.cat import Functor
+from depccg.cat import Category, Functor
 from depccg.tree import Tree
 from depccg.unification import Unification
 from depccg.printer.ja import ja_of
@@ -64,6 +64,19 @@ def cross_forward(cat_symbol: str) -> bool:
 
 def cross_backward(cat_symbol: str) -> bool:
     return (cat_symbol.startswith('<')) and ('x' in cat_symbol)
+
+
+def allmadeof(a: Category, b: Category, c: Category) -> bool:
+    s = set()
+    def rec(cat):
+        if cat.is_functor:
+            rec(cat.left)
+            rec(cat.right)
+        else:
+            s.add(cat.base)
+        return s
+    union = rec(a).union(rec(b),rec(c))
+    return len(union) == 1
 
 
 ######################################################################
@@ -175,24 +188,29 @@ def toLeftward(top: Tree) -> Tree:
 
                 elif (top.op_symbol == '>')\
                         and (r.op_symbol == '<')\
-                            and a.cat.is_functor\
-                                and (a.cat.right.base == 'NP')\
-                                    and (c.cat.right.is_atomic)\
-                                        and (c.cat.right.base == 'NP')\
-                                            and (re.match(r'(\(*)NP', str(b.cat)) is not None):
-                    uni = Unification("a/b", "b")
-                    if uni(clear_features(a.cat),
-                               b.cat):
-                        newleft_cat = a.cat.left
+                            and allmadeof(a.cat, b.cat, c.cat):  # if three categories are made of the same category,
+                    new_order = 0
+                    newleft = rebuild(new_order, b)
+                    if isinstance(newleft, Tree):
                         return Tree.make_binary(top.cat,
-                                                Tree.make_binary(newleft_cat,
-                                                                a,
-                                                                b,
-                                                                'fa',
-                                                                '>'),
+                                                newleft,
                                                 c,
-                                                'ba',
-                                                '<')
+                                                r.op_string,
+                                                r.op_symbol)
+                    elif newleft == None:
+                        uni = Unification("a/b", "b")
+                        if uni(clear_features(a.cat),
+                                b.cat):
+                            newleft_cat = a.cat.left
+                            return Tree.make_binary(top.cat,
+                                                        Tree.make_binary(newleft_cat,
+                                                                        a,
+                                                                        b,
+                                                                        'fa',
+                                                                        '>'),
+                                                        c,
+                                                        r.op_string,
+                                                        r.op_symbol)
                     else:
                         return None
                 else:
