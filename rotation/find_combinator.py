@@ -55,7 +55,6 @@ class CombinatorPairFinder(object):
     def __init__(self, filepath: str):
         self.filepath = filepath
         self.combinatorPairList = []
-        # self.combinatorPairWithUnaryList = []
 
     def _traverse(self, tree: Tree):
         if tree.is_leaf == False:
@@ -101,6 +100,7 @@ class CombinatorPairFinder(object):
                 #                                /       \
                 #                               /         \
                 #                         cat: i[5]     cat: i[6]
+                #
                 stack.append('{' + i[0] + ' ' + i[2] + ' {' + i[3] + ' 1/1/_/_} {' + i[1] + ' ' + i[4] + ' {' + i[5] + ' 2/2/_/_} {' + i[6]+ ' 3/3/_/_}}}')
             f.write('\n')
             for i,j in enumerate(read_parsedstring(stack)):
