@@ -4,9 +4,10 @@ from pathlib import Path
 from collections import defaultdict
 
 from depccg.tools.ja.reader import read_ccgbank
+from depccg.printer.deriv import deriv_of
 from depccg.tree import Tree
 
-from parsed_reader import read_parsedtree
+from parsed_reader import read_parsedtree, read_parsedstring
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                     level=logging.INFO)
@@ -68,6 +69,8 @@ class CombinatorPairFinder(object):
                     self.combinatorPairList.append([tree.op_symbol,
                                                     children[1].op_symbol,
                                                     str(tree.cat),
+                                                    str(children[0].cat),
+                                                    str(children[1].cat),
                                                     str(children[1].left_child.cat),
                                                     str(children[1].right_child.cat)])
 
@@ -86,44 +89,26 @@ class CombinatorPairFinder(object):
 
         parent = Path(args.PATH).parent
         textname = str(Path(args.PATH).stem) + 'combinators.txt'
+        stack = []
         with open(parent/textname, 'w') as f:
             for i in seen:
-                print(f'{i[0]}, {i[1]}; {i[2]}, {i[3]}, {i[4]}', file=f)
+                print(f'op_symbol: {i[0]}, {i[1]}', file=f)
+                #
+                #             op_symbol: i[0], cat: i[2]
+                #                  /              \
+                #                 /                \
+                #           cat: i[3]     op_symbol: i[1], cat: i[4]
+                #                                /       \
+                #                               /         \
+                #                         cat: i[5]     cat: i[6]
+                stack.append('{' + i[0] + ' ' + i[2] + ' {' + i[3] + ' 1/1/_/_} {' + i[1] + ' ' + i[4] + ' {' + i[5] + ' 2/2/_/_} {' + i[6]+ ' 3/3/_/_}}}')
+            f.write('\n')
+            for i,j in enumerate(read_parsedstring(stack)):
+                f.write(str(i))
+                f.write('\n')
+                f.write(deriv_of(j))
+                f.write('\n')
 
-
-    # Unary ruleが入ったときの、
-    #
-    #           a
-    #           |
-    #           b
-    #          / \
-    #         c   d
-    #
-    #
-    # def _traverseWithUnary(self, tree: Tree):
-    #     if tree.is_leaf == False:
-    #         children = tree.children
-    #         if len(children) == 1:
-    #             self._traverseWithUnary(children[0])
-    #         else:
-    #             self._traverseWithUnary(children[0])
-    #             self._traverseWithUnary(children[1])
-    #             if children[1].is_unary:
-    #                 self._traverseWithUnary(children[0].right_child)
-    #                 self._traverseWithUnary(children[0].left_child)
-
-    # @staticmethod
-    # def create_combinatorPairWithUnaryList(args):
-    #     self = CombinatorPairFinder(args.PATH)
-
-    #     trees = [tree for _, _, tree in read_parsedtree(self.filepath)]
-    #     for tree in trees:
-    #         self._traverse(tree)
-
-    #     combinatorPairList = {f'{k}': v for k, v in self.combinatorPairList.items()}
-    #     parent = Path(args.PATH).parent
-    #     textname = str(Path(args.PATH).stem) + 'combinators.txt'
-    #     self._write(combinatorPairList, parent / textname)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
