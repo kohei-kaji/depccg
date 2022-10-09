@@ -45,12 +45,31 @@ order_to_forwardsymbol: Dict[int, str] = {
             2: '>B2'
 }
 
+# order_to_forwardcrossedstring: Dict[int, str] = {
+#             0: 'fa',
+#             1: 'fc',
+#             2: 'fc2'
+# }
+
+order_to_forwardcrossedsymbol: Dict[int, str] = {
+            1: '>Bx1',
+            2: '>Bx2'
+}
+
 order_to_backwardstring: Dict[int, str] = {
             0: 'ba',
+            1: 'ba',
+            2: 'ba',
+            3: 'ba',
+            4: 'ba',
 }
 
 order_to_backwardsymbol: Dict[int, str] = {
-            0: 'ba',
+            0: '<',
+            1: '<B1',
+            2: '<B2',
+            3: '<B3',
+            4: '<B4',
 }
 
 def forward(cat_symbol: str) -> bool:
