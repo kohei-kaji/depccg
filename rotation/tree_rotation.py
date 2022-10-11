@@ -45,23 +45,24 @@ order_to_forwardsymbol: Dict[int, str] = {
             2: '>B2'
 }
 
-# order_to_forwardcrossedstring: Dict[int, str] = {
-#             0: 'fa',
-#             1: 'fc',
-#             2: 'fc2'
-# }
+order_to_forwardcrossedstring: Dict[int, str] = {
+            1: 'fx',
+            2: 'fx',
+            3: 'fx'
+}
 
 order_to_forwardcrossedsymbol: Dict[int, str] = {
             1: '>Bx1',
-            2: '>Bx2'
+            2: '>Bx2',
+            3: '>Bx3'
 }
 
 order_to_backwardstring: Dict[int, str] = {
             0: 'ba',
-            1: 'ba',
-            2: 'ba',
-            3: 'ba',
-            4: 'ba',
+            1: 'bx',
+            2: 'bx',
+            3: 'bx',
+            4: 'bx',
 }
 
 order_to_backwardsymbol: Dict[int, str] = {
@@ -73,16 +74,13 @@ order_to_backwardsymbol: Dict[int, str] = {
 }
 
 def forward(cat_symbol: str) -> bool:
-    return (cat_symbol.startswith('>')) and ('x' not in cat_symbol)
+    return cat_symbol.startswith('>')
 
 def backward(cat_symbol: str) -> bool:
     return (cat_symbol.startswith('<')) and ('x' not in cat_symbol)
 
 def cross_forward(cat_symbol: str) -> bool:
     return (cat_symbol.startswith('>')) and ('x' in cat_symbol)
-
-def cross_backward(cat_symbol: str) -> bool:
-    return (cat_symbol.startswith('<')) and ('x' in cat_symbol)
 
 
 def allmadeof(a: Category, b: Category, c: Category) -> bool:
@@ -205,33 +203,33 @@ def toLeftward(top: Tree) -> Tree:
                     else:
                         return None
 
-                elif (top.op_symbol == '>')\
-                        and (r.op_symbol == '<')\
-                            and allmadeof(a.cat, b.cat, c.cat):  # if three categories are made of the same category,
-                    new_order = 0
-                    newleft = rebuild(new_order, b)
-                    if isinstance(newleft, Tree):
-                        return Tree.make_binary(top.cat,
-                                                newleft,
-                                                c,
-                                                r.op_string,
-                                                r.op_symbol)
-                    elif newleft == None:
-                        uni = Unification("a/b", "b")
-                        if uni(clear_features(a.cat),
-                                b.cat):
-                            newleft_cat = a.cat.left
-                            return Tree.make_binary(top.cat,
-                                                        Tree.make_binary(newleft_cat,
-                                                                        a,
-                                                                        b,
-                                                                        'fa',
-                                                                        '>'),
-                                                        c,
-                                                        r.op_string,
-                                                        r.op_symbol)
-                    else:
-                        return None
+                # elif (top.op_symbol == '>')\
+                #         and (r.op_symbol == '<')\
+                #             and allmadeof(a.cat, b.cat, c.cat):  # if three categories are made of the same category,
+                #     new_order = 0
+                #     newleft = rebuild(new_order, b)
+                #     if isinstance(newleft, Tree):
+                #         return Tree.make_binary(top.cat,
+                #                                 newleft,
+                #                                 c,
+                #                                 r.op_string,
+                #                                 r.op_symbol)
+                #     elif newleft == None:
+                #         uni = Unification("a/b", "b")
+                #         if uni(clear_features(a.cat),
+                #                 b.cat):
+                #             newleft_cat = a.cat.left
+                #             return Tree.make_binary(top.cat,
+                #                                         Tree.make_binary(newleft_cat,
+                #                                                         a,
+                #                                                         b,
+                #                                                         'fa',
+                #                                                         '>'),
+                #                                         c,
+                #                                         r.op_string,
+                #                                         r.op_symbol)
+                #     else:
+                #         return None
                 else:
                     return None
             else:
