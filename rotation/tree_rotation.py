@@ -1,8 +1,9 @@
-# - This implements rotate-to-left to Tree object.
-# - Unlike English, CCG categories are assigned to each punctuation in Japanese,
-#   so special punctuation rules are not necessary.
+"""
+- This implements rotate-to-left to Tree object.
+- Unlike English, CCG categories are assigned to each punctuation in Japanese,
+  so special punctuation rules are not necessary.
+"""
 
-import re
 import argparse
 from pathlib import Path
 from typing import Dict, Optional
@@ -15,11 +16,14 @@ from depccg.printer.ja import ja_of
 from parsed_reader import read_parsedtree
 from clear_features import clear_features
 
-# all the original combinators in the Japanese CCGBank
-#   >, >B, >Bx1, >Bx2, >Bx3,
-#   <, <B1, <B2, <B3, <B4,
-#   ADV0, ADV1, ADV2,
-#   ADNint, ADNext, SSEQ
+"""
+All the original combinators in the Japanese CCGBank are follows;
+  >, >B, >Bx1, >Bx2, >Bx3,
+  <, <B1, <B2, <B3, <B4,
+  ADV0, ADV1, ADV2,
+  ADNint, ADNext, SSEQ
+"""
+
 cat_to_order: Dict[str, int] = {
             '>':0,
             '<':0,
@@ -36,25 +40,29 @@ cat_to_order: Dict[str, int] = {
 order_to_forwardstring: Dict[int, str] = {
             0: 'fa',
             1: 'fc',
-            2: 'fc2'
+            2: 'fc2',
+            3: 'fc3'
 }
 
 order_to_forwardsymbol: Dict[int, str] = {
             0: '>',
             1: '>B',
-            2: '>B2'
+            2: '>B2',
+            3: '>B3'
 }
 
 order_to_forwardcrossedstring: Dict[int, str] = {
             1: 'fx',
             2: 'fx',
-            3: 'fx'
+            3: 'fx',
+            4: 'fx'
 }
 
 order_to_forwardcrossedsymbol: Dict[int, str] = {
             1: '>Bx1',
             2: '>Bx2',
-            3: '>Bx3'
+            3: '>Bx3',
+            4: '>Bx4'
 }
 
 order_to_backwardstring: Dict[int, str] = {
@@ -77,36 +85,59 @@ def forward(cat_symbol: str) -> bool:
     return cat_symbol.startswith('>')
 
 def backward(cat_symbol: str) -> bool:
-    return (cat_symbol.startswith('<')) and ('x' not in cat_symbol)
+    return cat_symbol.startswith('<')
 
-def cross_forward(cat_symbol: str) -> bool:
-    return (cat_symbol.startswith('>')) and ('x' in cat_symbol)
+def crossed(cat_symbol: str) -> bool:
+    return 'x' in cat_symbol
 
+def post_modifier(cat: Category) -> bool:
+    return cat.is_functor and cat.left == cat.right and cat.slash == '\\'
 
-def allmadeof(a: Category, b: Category, c: Category) -> bool:
-    s = set()
-    def rec(cat):
-        if cat.is_functor:
-            rec(cat.left)
-            rec(cat.right)
-        else:
-            s.add(cat.base)
-        return s
-    union = rec(a).union(rec(b),rec(c))
-    return len(union) == 1
+def unification(cat_symbol: str):
+    global uni
+    match cat_symbol:
+        case '>':
+            uni = Unification("a/b", "b")
+        case '<':
+            uni = Unification("b", "a\\b")
+        case '>B':
+            uni = Unification("a/b", "b/c")
+        case '>B2':
+            uni = Unification("a/b", "(b/c)|d")
+        case '>B3':
+            uni = Unification("a/b", "((b/c)|d)|e")
+        case '<B1':
+            uni = Unification("b\\c", "a\\b")
+        case '<B2':
+            uni = Unification("(b\\c)|d", "a\\b")
+        case '<B3':
+            uni = Unification("((b\\c)|d)|e", "a\\b")
+        case '<B4':
+            uni = Unification("(((b\\c)|d)|e)|f", "a\\b")
+        case '>Bx1':
+            uni = Unification("a/b", "b\\c")
+        case '>Bx2':
+            uni = Unification("a/b", "(b\\c)|d")
+        case '>Bx3':
+            uni = Unification("a/b", "((b\\c)|d)|e")
+        case '>Bx4':
+            uni = Unification("a/b", "(((b\\c)|d)|e)|f")
 
 
 ######################################################################
-#       >Bx                         >By
-#       /  \      (if x ≥ y)        /  \
-#      a   >By        =>      >B(x-y+1) c
-#          /  \                   /  \
-#         b    c                 a    b
 #
-# toLeftward :: [Tree(right-branch)] -> [Tree(left-branch)]
-#   // implemented by top-down traversal
+#       >B[x]                          >B[y]
+#       /  \         (if x ≥ y)         /  \
+#      a   >B[y]        =>       >B[x-y+1] c
+#          /  \                      /  \
+#         b    c                    a    b
 #
-# rebuild :: [x: int] -> [>By(b,c): Tree] -> [Optional[Tree]]
+#
+#       <B[x]                      <B[x+y-1]
+#       /  \         (if y ≥ 1)       /  \
+#      a   <B[y]        =>        <B[x]   c
+#          /  \                    /  \
+#         b    c                  a    b
 #
 #
 #
@@ -127,56 +158,56 @@ def allmadeof(a: Category, b: Category, c: Category) -> bool:
 #
 #
 #
-# - forward, backward混在型, crossed composition混じりは未対応
-#   - crossed composition混じりが現れうるかについては未確認。
-# (3)
-#          >B0:NP                            <B0:NP
-#         /      \                           /     \
-#     NP/NP    <B0:NP        =>           >B0:NP   NP\NP
-#             /      \                   /     \
-#            NP     NP\NP              NP/NP    NP
-#
-# (4)
-#          >B0:S                            <B0:S
-#         /      \                         /     \
-#       S/S    <B0:S        =>         >B0:S     S\S
-#             /      \                 /     \
-#            S       S\S             S/S      S
-#
-# (4)
-#        >Bx1:S/NP                          >Bx1:S/NP
-#        /       \                           /      \
-#      S/S   >Bx1:S/NP          =>      >B1:S/NP   NP\NP
-#             /       \                /      \
-#           S/NP     NP\NP           S/S     S/NP
 ######################################################################
 
 
+# Rotate-to-left are implemented in post-order (bottom-up) traversal.
 def toLeftward(top: Tree) -> Tree:
-    if (top.is_unary == False) and (forward(top.op_symbol)):
+    if top.is_unary == False:
         a = top.left_child
         right = top.right_child
         def rebuild(x: int, r: Tree) -> Optional[Tree]:
-            if (r.is_unary == False) and (r.op_symbol != 'SSEQ'):  # if node is binary and is not conjunction,
+            if r.is_unary == False and r.op_symbol != 'SSEQ':  # if node is binary and is not conjunction,
                 y = cat_to_order[r.op_symbol]
                 b, c = r.children
-                if (forward(r.op_symbol)) and (x >= y):
-                    new_order = x-y+1
-                    newleft = rebuild(new_order, b)
+                if forward(top.op_symbol) and forward(r.op_symbol) and x >= y:
+                    new_leftorder = x-y+1
+                    new_toporder = y
+                    newleft = rebuild(new_leftorder, b)
                     if isinstance(newleft, Tree):
                         return Tree.make_binary(top.cat,
                                                 newleft,
                                                 c,
                                                 r.op_string,
                                                 r.op_symbol)
-                    elif (newleft == None) and (new_order <= 2):
-                        uni = Unification("a/b", "b/c")
-                        if uni(clear_features(a.cat),
-                               b.cat):  # ignore the features of a.cat in this momemt
+                    elif newleft == None:
+                        if crossed(top.op_symbol) or crossed(r.op_symbol):
+                            unification(order_to_forwardcrossedsymbol[new_leftorder])
+                            if uni(clear_features(a.cat), b.cat):
+                                newleft_cat = Functor(a.cat.left, "/", uni["c"])
+                                newleft_string = order_to_forwardstring[new_leftorder]
+                                newleft_symbol = order_to_forwardsymbol[new_leftorder]
+                                unification(order_to_forwardcrossedsymbol[new_toporder])
+                                if uni(newleft_cat, c.cat):
+                                    newtop_cat = Functor(newleft_cat.left, "\\", uni["c"])
+                                    return Tree.make_binary(newtop_cat,
+                                                            Tree.make_binary(newleft_cat,
+                                                                            a,
+                                                                            b,
+                                                                            newleft_string,
+                                                                            newleft_symbol),
+                                                            c,
+                                                            order_to_forwardcrossedstring[new_toporder],
+                                                            order_to_forwardcrossedsymbol[new_toporder])
+                                else:
+                                    return None
+                            else:
+                                return None
+                        else:
                             newleft_cat = Functor(a.cat.left, "/", uni["c"])
-                            newleft_string = order_to_forwardstring[new_order]
-                            newleft_symbol = order_to_forwardsymbol[new_order]
-                            uni = Unification("a/b", "b/c")
+                            newleft_string = order_to_forwardstring[new_leftorder]
+                            newleft_symbol = order_to_forwardsymbol[new_leftorder]
+                            unification(newleft_symbol)
                             if uni(newleft_cat, c.cat):
                                 newtop_cat = Functor(newleft_cat.left, "/", uni["c"])
                                 return Tree.make_binary(newtop_cat,
@@ -189,47 +220,82 @@ def toLeftward(top: Tree) -> Tree:
                                                         r.op_string,
                                                         r.op_symbol)
                             else:
-                                return Tree.make_binary(top.cat,
+                                return None
+                    else:
+                        return None
+                elif backward(top.op_symbol) and backward(r.op_symbol) and y >= 1:
+                    new_leftorder = x
+                    new_toporder = x+y-1
+                    newleft = rebuild(new_leftorder, b)
+                    if isinstance(newleft, Tree):
+                        return Tree.make_binary(top.cat,
+                                                newleft,
+                                                c,
+                                                r.op_string,
+                                                r.op_symbol)
+                    elif newleft == None:
+                        unification(order_to_backwardsymbol[new_leftorder])
+                        if uni(clear_features(a.cat), b.cat):
+                            newleft_cat = Functor(a.cat.left, "\\", uni["c"])
+                            newleft_string = order_to_backwardstring[new_leftorder]
+                            newleft_symbol = order_to_backwardsymbol[new_leftorder]
+                            unification(order_to_backwardsymbol[new_toporder])
+                            if uni(newleft_cat, c.cat):
+                                newtop_cat = Functor(newleft_cat.left, "\\", uni["c"])
+                                return Tree.make_binary(newtop_cat,
                                                         Tree.make_binary(newleft_cat,
                                                                         a,
                                                                         b,
                                                                         newleft_string,
                                                                         newleft_symbol),
                                                         c,
-                                                        r.op_string,
-                                                        r.op_symbol)
+                                                        order_to_backwardstring[new_toporder],
+                                                        order_to_backwardsymbol[new_toporder])
+                            else:
+                                return None
                         else:
                             return None
                     else:
                         return None
-
-                # elif (top.op_symbol == '>')\
-                #         and (r.op_symbol == '<')\
-                #             and allmadeof(a.cat, b.cat, c.cat):  # if three categories are made of the same category,
-                #     new_order = 0
-                #     newleft = rebuild(new_order, b)
-                #     if isinstance(newleft, Tree):
-                #         return Tree.make_binary(top.cat,
-                #                                 newleft,
-                #                                 c,
-                #                                 r.op_string,
-                #                                 r.op_symbol)
-                #     elif newleft == None:
-                #         uni = Unification("a/b", "b")
-                #         if uni(clear_features(a.cat),
-                #                 b.cat):
-                #             newleft_cat = a.cat.left
+                # elif forward(top.op_symbol) and backward(r.op_symbol) and post_modifier(c):
+                #     if crossed(top.op_symbol):
+                #         new_leftorder = y
+                #         new_toporder = x+y-1
+                #         newleft = rebuild(new_leftorder, b)
+                #         if isinstance(newleft, Tree):
                 #             return Tree.make_binary(top.cat,
-                #                                         Tree.make_binary(newleft_cat,
-                #                                                         a,
-                #                                                         b,
-                #                                                         'fa',
-                #                                                         '>'),
-                #                                         c,
-                #                                         r.op_string,
-                #                                         r.op_symbol)
+                #                                     newleft,
+                #                                     c,
+                #                                     r.op_string,
+                #                                     r.op_symbol)
+                #         elif newleft == None:
+                #             unification(order_to_backwardsymbol[new_leftorder])
+                #             if uni(clear_features(a.cat), b.cat):
+                #                 newleft_cat = Functor(a.cat.left, "\\", uni["c"])
+                #                 newleft_string = order_to_backwardstring[new_leftorder]
+                #                 newleft_symbol = order_to_backwardsymbol[new_leftorder]
+                #                 unification(order_to_backwardsymbol[new_toporder])
+                #                 if uni(newleft_cat, c.cat):
+                #                     newtop_cat = Functor(newleft_cat.left, "\\", uni["c"])
+                #                     return Tree.make_binary(newtop_cat,
+                #                                             Tree.make_binary(newleft_cat,
+                #                                                             a,
+                #                                                             b,
+                #                                                             newleft_string,
+                #                                                             newleft_symbol),
+                #                                             c,
+                #                                             order_to_backwardstring[new_toporder],
+                #                                             order_to_backwardsymbol[new_toporder])
+                #                 else:
+                #                     return None
+                #             else:
+                #                 return None
+                #         else:
+                #             return None
                 #     else:
-                #         return None
+
+
+
                 else:
                     return None
             else:
