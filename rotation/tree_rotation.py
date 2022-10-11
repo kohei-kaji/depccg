@@ -204,23 +204,40 @@ def toLeftward(top: Tree) -> Tree:
                             else:
                                 return None
                         else:
+                            unification(order_to_forwardsymbol[new_leftorder])
+                            uni(clear_features(a.cat), b.cat)
                             newleft_cat = Functor(a.cat.left, "/", uni["c"])
                             newleft_string = order_to_forwardstring[new_leftorder]
                             newleft_symbol = order_to_forwardsymbol[new_leftorder]
-                            unification(newleft_symbol)
-                            if uni(newleft_cat, c.cat):
-                                newtop_cat = Functor(newleft_cat.left, "/", uni["c"])
-                                return Tree.make_binary(newtop_cat,
-                                                        Tree.make_binary(newleft_cat,
-                                                                        a,
-                                                                        b,
-                                                                        newleft_string,
-                                                                        newleft_symbol),
-                                                        c,
-                                                        r.op_string,
-                                                        r.op_symbol)
+                            unification(order_to_forwardsymbol[new_toporder])
+                            if new_toporder >= 1:
+                                if uni(newleft_cat, c.cat):
+                                    newtop_cat = Functor(newleft_cat.left, "/", uni["c"])
+                                    return Tree.make_binary(newtop_cat,
+                                                            Tree.make_binary(newleft_cat,
+                                                                            a,
+                                                                            b,
+                                                                            newleft_string,
+                                                                            newleft_symbol),
+                                                            c,
+                                                            r.op_string,
+                                                            r.op_symbol)
+                                else:
+                                    return None
                             else:
-                                return None
+                                if uni(newleft_cat, c.cat):
+                                    newtop_cat = uni["a"]
+                                    return Tree.make_binary(newtop_cat,
+                                                            Tree.make_binary(newleft_cat,
+                                                                            a,
+                                                                            b,
+                                                                            newleft_string,
+                                                                            newleft_symbol),
+                                                            c,
+                                                            r.op_string,
+                                                            r.op_symbol)
+                                else:
+                                    return None
                     else:
                         return None
                 elif backward(top.op_symbol) and backward(r.op_symbol) and y >= 1:
