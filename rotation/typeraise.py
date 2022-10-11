@@ -1,72 +1,63 @@
-import re
 import argparse
 from pathlib import Path
 
 from depccg.cat import Category, Functor
 from depccg.tree import Tree
+from depccg.unification import Unification
 from depccg.printer.ja import ja_of
 
 from parsed_reader import read_parsedtree
 from clear_features import clear_features
 
-# When following verbs appear on the right of NPs, type-raise will be applied.
-"""
-Type-Raising is applied to the following categories;
-    1. NPs combined with verbal phrases, such as S\NP, (S\NP)\NP, or ((S\NP)\NP)\NP.
 
-           NP             NP             (S\NP)\NP
-                   ------------------>T
-                   (S\NP)/((S\NP)\NP)
-                   -------------------------------->
-                                  S\NP
-        -------->T
-         S/(S\NP)
-        ------------------------------------------->
-                            S
+# Type-Raising is applied to the left-side category combined by backward application, such as
+#     1. NPs combined with verbal phrases
+#
+#            NP             NP             (S\NP)\NP
+#                    ------------------>T
+#                    (S\NP)/((S\NP)\NP)
+#                    -------------------------------->
+#                                   S\NP
+#         -------->T
+#          S/(S\NP)
+#         ------------------------------------------->
+#                             S
+#
+#     2. or others
+#
+#           S        S\S
+#         --->T
+#         S/(S\S)
+#         -------------->
+#                S
+#
+#         NP/NP           NP            (NP/NP)\NP
+#               -------------------->T
+#               (NP/NP)/((NP/NP)\NP)
+#               ---------------------------------->
+#                             NP/NP
+#         ----------------------------------------->B
+#                             NP/NP
 
-    2. A category that is combined by backward application with its right category,
-       and such that the resulting category is combined as a term by forward combination.
 
-           NP/NP           NP            (NP/NP)\NP
-                  -------------------->T
-                  (NP/NP)/((NP/NP)\NP)
-                  ---------------------------------->
-                                  NP/NP
-           ----------------------------------------->B
-                            NP/NP
+def typeraise(l: Category, r: Functor) -> Functor:
+    l = clear_features(l)
+    r = clear_features(r)
+    return Functor(r.left, '/', Functor(r.left, '\\', l))
 
-"""
-one_arg: Functor = Category.parse(r"S/(S\NP)")
-two_args: Functor = Category.parse(r"(S\NP)/((S\NP)\NP)")
-three_args: Functor = Category.parse(r"((S\NP)\NP)/(((S\NP)\NP)\NP)")
-four_args: Functor = Category.parse(r"(((S\NP)\NP)\NP)/((((S\NP)\NP)\NP)\NP)")
-
-def typeraise(r:Functor) -> Functor:
-    vp = clear_features(r)
-    match vp:
-        case one_arg.right:
-            return one_arg
-        case two_args.right:
-            return two_args
-        case three_args.right:
-            return three_args
-        case four_args.right:
-            return four_args
-        case _:
-            raise Exception('This category is not assumed to be inputted.')
-
-def is_vp(cat: Category) -> bool:
-    """
-    A functor category is VP when
-        1. it includes just one 'S' category and
-        2. it starts with 'S' category and
-        3. it has no forward slash ('/').
-    """
-    s = str(cat)
-    return (cat.is_functor
-            and s.count('S') == 1
-            and re.match(r'\(*S', s) is not None
-            and re.search(r'/', s) is None)
+# import re
+# def is_vp(cat: Category) -> bool:
+#     """
+#     A functor category is VP when
+#         1. it includes just one 'S' category and
+#         2. it starts with 'S' category and
+#         3. it has no forward slash ('/').
+#     """
+#     s = str(cat)
+#     return (cat.is_functor
+#             and s.count('S') == 1
+#             and re.match(r'\(*S', s) is not None
+#             and re.search(r'/', s) is None)
 
 class TypeRaise(object):
     def __init__(self, filepath: str) -> None:
@@ -82,28 +73,23 @@ class TypeRaise(object):
                 return Tree.make_unary(node.cat,
                                     _apply_typeraise(node.child),
                                     node.op_string, node.op_symbol)
-            elif (node.left_child.cat.is_atomic
-                and node.left_child.cat.base == 'NP'
-                and is_vp(node.right_child.cat)):  # if a left-cat is NP and a right-cat is VP
-                return Tree.make_binary(node.cat,
-                                        Tree.make_unary(typeraise(node.right_child.cat),
-                                                        _apply_typeraise(node.left_child),
-                                                        'tr',
-                                                        '>T'),
-                                        _apply_typeraise(node.right_child),
-                                        'fa',
-                                        '>')
-            elif (node.op_symbol == '>' or node.op_symbol == '>B'
-                  and node.right.op_symbol == '<'):
-                return Tree.make_binary(node.cat,
-                                        _apply_typeraise(node.left_child),
-                                        Tree.make_binary(node.right_child.cat,
-                                                        _apply_typeraise(node.left_child),
-                                                        'tr',
-                                                        '>T'),
-                                        _apply_typeraise(node.right_child),
-                                        'fa',
-                                        '>')
+            elif node.op_symbol == '<':
+                uni = Unification("a", "b\a")
+                if uni(node.left_child.cat, node.right_child.cat):
+                    return Tree.make_binary(node.cat,
+                                            Tree.make_unary(typeraise(node.left_child.cat, node.right_child.cat),
+                                                            _apply_typeraise(node.left_child),
+                                                            'tr',
+                                                            '>T'),
+                                            _apply_typeraise(node.right_child),
+                                            'fa',
+                                            '>')
+                else:
+                    return Tree.make_binary(node.cat,
+                                            _apply_typeraise(node.left_child),
+                                            _apply_typeraise(node.right_child),
+                                            node.op_string,
+                                            node.op_symbol)
             else:
                 return Tree.make_binary(node.cat,
                                         _apply_typeraise(node.left_child),
