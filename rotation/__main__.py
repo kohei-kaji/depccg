@@ -51,9 +51,9 @@ if __name__ == '__main__':
     if args.input == 'parsed':
         parent = Path(args.PATH).parent
         text_dir = parent / 'text'
-        text_dir.mkdir()
+        text_dir.mkdir(parents=True, exist_ok=True)
         nc_dir = parent / 'NodeCount'
-        nc_dir.mkdir()
+        nc_dir.mkdir(parents=True, exist_ok=True)
 
         trees = [tree for _, _, tree in read_parsedtree(args.PATH)]
         text_right = text_dir / 'right.txt'
