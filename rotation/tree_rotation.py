@@ -127,30 +127,29 @@ def unification(cat_symbol: str):
             uni = Unification("a/b", "(((b\\c)|d)|e)|f")
 
 # The following rotations are implemented;
-#
-# 1. When top-node and right-node have a forward composition or application,
+#   1. When top-node and right-node have a forward composition or application,
 #       >B[x]                          >B[y]
 #       /  \        (if x ≥ y)          /  \
 #      a   >B[y]        =>       >B[x-y+1] c
 #          /  \                      /  \
 #         b    c                    a    b
 #
-# 2. When top-node and right-node have a backward composition or application,
+#   2. When top-node and right-node have a backward composition or application,
 #       <B[x]                      <B[x+y-1]
 #       /  \        (if y ≥ 1)        /  \
 #      a   <B[y]        =>        <B[x]   c
 #          /  \                    /  \
 #         b    c                  a    b
 #
-# 3. When c is a post-modifier,
-#     3-1. When top-node has a forward application,
+#   3. When c is a post-modifier,
+#       3-1. When top-node has a forward application,
 #         >B[0]                       <B[0]
 #         /  \                        /  \
 #        a   <B[_]      =>         >B[0]  c
 #             /  \                 /  \
 #            b    c               a    b
 #
-#     3-2. When top-node has a forward composition,
+#       3-2. When top-node has a forward composition,
 #         3-2-1. When a is a modifier,
 #            >Bx[x]                       <B[y]
 #             /  \                        /  \
@@ -412,7 +411,7 @@ class TreeRotation(object):
         self = TreeRotation(args.PATH)
 
         parent = Path(self.filepath).parent
-        textname = str(Path(self.filepath).stem) + '_leftbranched.txt'
+        textname = str(Path(self.filepath).stem) + '_left.txt'
         trees = [tree for _, _, tree in read_parsedtree(self.filepath)]
         with open(parent / textname, 'w') as f:
             for tree in trees:
