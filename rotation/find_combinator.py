@@ -1,7 +1,10 @@
 import logging
 import argparse
 from pathlib import Path
+from re import T
+from typing import List
 from collections import defaultdict
+from tqdm import tqdm
 
 from depccg.tools.ja.reader import read_ccgbank
 from depccg.printer.deriv import deriv_of
@@ -52,8 +55,8 @@ class CombinatorListCreator(object):
 
 
 class CombinatorPairFinder(object):
-    def __init__(self, filepath: str):
-        self.filepath = filepath
+    def __init__(self, path_list: List[str]):
+        self.filepath = path_list
         self.combinatorPairList = []
 
     def _traverse(self, tree: Tree):
@@ -77,18 +80,22 @@ class CombinatorPairFinder(object):
     def create_combinatorPairList(args):
         self = CombinatorPairFinder(args.PATH)
 
-        trees = [tree for _, _, tree in read_parsedtree(self.filepath)]
-        for tree in trees:
-            self._traverse(tree)
         seen = []
-        for i in self.combinatorPairList:
-            if i not in seen:
-                seen.append(i)
-        seen.sort()
+        for path in self.pathlist:
+            trees = [tree for _, _, tree in read_parsedtree(path)]
+            for tree in trees:
+                self._traverse(tree)
+            for i in self.combinatorPairList:
+                if i not in seen:
+                    seen.append(i)
+        return seen.sort()
 
-        parent = Path(args.PATH).parent
-        textname = str(Path(args.PATH).stem) + 'combinators.txt'
+
+    def write(self, args):
+        parent = Path(args.PATH[0]).parent
+        textname = 'combinators.txt'
         stack = []
+        seen = self.create_combinatorPairList(args)
         with open(parent/textname, 'w') as f:
             for i in seen:
                 print(f'op_symbol: {i[0]}, {i[1]}', file=f)
@@ -110,18 +117,96 @@ class CombinatorPairFinder(object):
                 f.write('\n')
 
 
+class RevealFinder(object):
+    def __init__(self, path_list: List[str]):
+        self.path_list = path_list
+        self.revealList= []
+
+    def _traverse(self, tree: Tree):
+        if tree.is_leaf == False:
+            if len(tree.children) == 1:
+                self._traverse(tree.child)
+            else:
+                self._traverse(tree.left_child)
+                self._traverse(tree.right_child)
+                if tree.right_child.is_leaf == False:
+                    if len(tree.right_child.children) == 1:
+                       self._traverse(tree.right_child.child)
+                    else:
+                        self._traverse(tree.right_child.left_child)
+                        self._traverse(tree.right_child.right_child)
+                        if tree.right_child.left_child.is_leaf == False:
+                            if len(tree.right_child.left_child.children) == 1:
+                                self._traverse(tree.right_child.left_child.child)
+                            else:
+                                self._traverse(tree.right_child.left_child.left_child)
+                                self._traverse(tree.right_child.left_child.right_child)
+                                self.revealList.append([tree.op_symbol,
+                                                        tree.right_child.op_symbol,
+                                                        tree.right_child.left_child.op_symbol,
+                                                        str(tree.cat),
+                                                        str(tree.left_child.cat),
+                                                        str(tree.right_child.cat),
+                                                        str(tree.right_child.left_child.cat),
+                                                        str(tree.right_child.right_child.cat),
+                                                        str(tree.right_child.left_child.left_child.cat),
+                                                        str(tree.right_child.left_child.right_child.cat)])
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('PATH',
+                        nargs="*",
                         type=Path,
                         help='path to JapaneseCCGBank data file')
-    parser.add_argument('--input',
-                        help="Choose 'uni' or 'pair'. The former outputs the all of the combinators in the input data, and the latter outputs the combinators of a top-node and right-child-node.",
-                        choices=['uni', 'pair'],
+    parser.add_argument('--output',
+                        help="Choose 'uni' or 'pair' or 'reveal. The former outputs the all of the combinators in the input data, and the latter outputs the combinators of a top-node and right-child-node.",
+                        choices=['uni', 'pair', 'reveal'],
                         default='uni')
     args = parser.parse_args()
 
-    if args.input == 'pair':
+    if args.output == 'pair':
         CombinatorPairFinder.create_combinatorPairList(args)
+    elif args.output == 'reveal':
+        reveal_finder = RevealFinder(args.PATH)
+
+        seen = []
+        pathlist = reveal_finder.path_list
+        for path in tqdm(pathlist):
+            trees = [tree for _, _, tree in read_parsedtree(path)]
+            for tree in tqdm(trees):
+                reveal_finder._traverse(tree)
+            for i in tqdm(reveal_finder.revealList):
+                if i not in seen:
+                    seen.append(i)
+
+        stack = []
+        # outputのpathを指定
+        with open('/Users/kako/B4study-tools/BCCWJ-EyeTrack/data/CombinatorPair/reveal.txt', 'w') as f:
+            for i in tqdm(sorted(seen)):
+                print(f'op_symbol: {i[0]}, {i[1]}, {i[2]}', file=f)
+                #
+                #                sym: i[0], cat: i[3]
+                #                   /            \
+                #                  /              \
+                #                 /                \
+                #           cat: i[4]        sym: i[1], cat: i[5]
+                #                              /           \
+                #                             /             \
+                #                            /               \
+                #                 sym: i[2], cat: i[6]      cat: i[7]
+                #                   /           \
+                #                  /             \
+                #                 /               \
+                #            cat: i[8]          cat: i[9]
+                #
+                # {i[0] i[3] {i[4] 1/1/_/_} {i[1] i[5] {i[2] i[6] {i[8] 2/2/_/_} {i[9] 3/3/_/_}} {i[7] 4/4/_/_}}}
+                stack.append('{' + i[0] + ' ' + i[3] + ' {' + i[4] + ' 1/1/_/_} {' + i[1] + ' ' +  i[5] + ' {' + i[2] + ' ' + i[6] + ' {' + i[8] + ' 2/2/_/_} {' + i[9] + ' 3/3/_/_}} {' + i[7] + ' 4/4/_/_}}}')
+            f.write('\n')
+            for i,j in tqdm(enumerate(read_parsedstring(stack))):
+                f.write(str(i))
+                f.write('\n')
+                f.write(deriv_of(j))
+                f.write('\n')
+
     else:
         CombinatorListCreator.create_combinatorlist(args)
