@@ -1,5 +1,8 @@
 import re
+from typing import List
+
 from depccg.cat import Category
+from depccg.tree import Tree
 
 
 def is_vp(cat: Category) -> bool:
@@ -37,3 +40,14 @@ def theSameCats(a: Category, b: Category, c: Category) -> bool:
         return s
     union = rec(a).union(rec(b),rec(c))
     return len(union) == 1
+
+def tokens(tree: Tree) -> List[str]:
+    def rec(node: Tree):
+        if node.is_leaf:
+            result.append(node.children[0]['word'])
+        else:
+            for child in node.children:
+                rec(child)
+    result = []
+    rec(tree)
+    return result
