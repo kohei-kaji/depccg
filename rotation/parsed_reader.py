@@ -5,6 +5,7 @@
 
 
 from typing import Iterator, List, Tuple
+from tqdm import tqdm
 # import re
 
 from depccg.cat import Category
@@ -34,7 +35,7 @@ def read_parsedtree(filepath: str) -> Iterator[ReaderResult]:
         Iterator[ReaderResult]: iterator object containing parse results
     """
 
-    for i, line in enumerate(open(filepath)):
+    for i, line in tqdm(enumerate(open(filepath))):
         line = line.strip()
         if len(line) == 0:
             continue
@@ -43,7 +44,7 @@ def read_parsedtree(filepath: str) -> Iterator[ReaderResult]:
 
 def read_parsedstring(strings: List[str]) -> List[Tree]:
     results = []
-    for line in strings:
+    for line in tqdm(strings):
         tree, _ = ParsedJaCCGLineReader(line).parse()
         results.append(tree)
     return results

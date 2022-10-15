@@ -1,7 +1,6 @@
 import logging
 import argparse
 from pathlib import Path
-from re import T
 from typing import List
 from collections import defaultdict
 from tqdm import tqdm
@@ -18,45 +17,25 @@ logger = logging.getLogger(__name__)
 
 
 class CombinatorListCreator(object):
-    def __init__(self, filepath: str):
-        self.filepath = filepath
-        self.combinator_list = defaultdict(int)
+    def __init__(self, path_list: List[str]):
+        self.path_list = path_list
+        self.combinator_dict = defaultdict(int)
 
     def _traverse(self, tree: Tree):
         if tree.is_leaf == False:
             children = tree.children
             if len(children) == 1:
                 self._traverse(children[0])
-                self.combinator_list[tree.op_symbol] += 1
+                self.combinator_dict[tree.op_symbol] += 1
             else:
                 self._traverse(children[0])
                 self._traverse(children[1])
-                self.combinator_list[tree.op_symbol] += 1
-
-    @staticmethod
-    def _write(dct, filename):
-        with open(filename, 'w') as f:
-            logger.info(f'writing to {f.name}')
-            for key, value in dct.items():
-                print(f'{key} # {str(value)}', file=f)
-
-    @staticmethod
-    def create_combinatorlist(args):
-        self = CombinatorListCreator(args.PATH)
-
-        trees = [tree for _, _, tree in read_ccgbank(self.filepath)]
-        for tree in trees:
-            self._traverse(tree)
-
-        combinator_list = {f'{k}': v for k, v in self.combinator_list.items()}
-        parent = Path(args.PATH).parent
-        textname = str(Path(args.PATH).stem) + 'combinator_list'
-        self._write(combinator_list, parent / textname)
+                self.combinator_dict[tree.op_symbol] += 1
 
 
-class CombinatorPairFinder(object):
+class RightBranchFinder(object):
     def __init__(self, path_list: List[str]):
-        self.filepath = path_list
+        self.path_list = path_list
         self.combinatorPairList = []
 
     def _traverse(self, tree: Tree):
@@ -75,46 +54,6 @@ class CombinatorPairFinder(object):
                                                     str(children[1].cat),
                                                     str(children[1].left_child.cat),
                                                     str(children[1].right_child.cat)])
-
-    @staticmethod
-    def create_combinatorPairList(args):
-        self = CombinatorPairFinder(args.PATH)
-
-        seen = []
-        for path in self.pathlist:
-            trees = [tree for _, _, tree in read_parsedtree(path)]
-            for tree in trees:
-                self._traverse(tree)
-            for i in self.combinatorPairList:
-                if i not in seen:
-                    seen.append(i)
-        return seen.sort()
-
-
-    def write(self, args):
-        parent = Path(args.PATH[0]).parent
-        textname = 'combinators.txt'
-        stack = []
-        seen = self.create_combinatorPairList(args)
-        with open(parent/textname, 'w') as f:
-            for i in seen:
-                print(f'op_symbol: {i[0]}, {i[1]}', file=f)
-                #
-                #             op_symbol: i[0], cat: i[2]
-                #                  /              \
-                #                 /                \
-                #           cat: i[3]     op_symbol: i[1], cat: i[4]
-                #                                /       \
-                #                               /         \
-                #                         cat: i[5]     cat: i[6]
-                #
-                stack.append('{' + i[0] + ' ' + i[2] + ' {' + i[3] + ' 1/1/_/_} {' + i[1] + ' ' + i[4] + ' {' + i[5] + ' 2/2/_/_} {' + i[6]+ ' 3/3/_/_}}}')
-            f.write('\n')
-            for i,j in enumerate(read_parsedstring(stack)):
-                f.write(str(i))
-                f.write('\n')
-                f.write(deriv_of(j))
-                f.write('\n')
 
 
 class RevealFinder(object):
@@ -156,16 +95,50 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('PATH',
                         nargs="*",
-                        type=Path,
+                        type=List[str],
                         help='path to JapaneseCCGBank data file')
     parser.add_argument('--output',
-                        help="Choose 'uni' or 'pair' or 'reveal. The former outputs the all of the combinators in the input data, and the latter outputs the combinators of a top-node and right-child-node.",
-                        choices=['uni', 'pair', 'reveal'],
+                        help="Choose 'uni' or 'right' or 'reveal. If 'right' is choosen, the combinators of right-branching tree are outputted. If 'reveal' is choosen, the combinators of the tree in which a reveal operation counld be impremented are outputted. Else, all of the combinators are outputted",
+                        choices=['uni', 'right', 'reveal'],
                         default='uni')
     args = parser.parse_args()
 
-    if args.output == 'pair':
-        CombinatorPairFinder.create_combinatorPairList(args)
+    if args.output == 'right':
+        rightbranch_finder = RightBranchFinder(args.PATH)
+        seen = []
+        pathlist = rightbranch_finder.path_list
+        for path in tqdm(pathlist):
+            trees = [tree for _, _, tree in read_parsedtree(path)]
+            for tree in tqdm(trees):
+                rightbranch_finder._traverse(tree)
+            for i in tqdm(rightbranch_finder.combinatorPairList):
+                if i not in seen:
+                    seen.append(i)
+
+        stack = []
+        OUTPUT_PATH = Path(args.PATH[0]).parent / 'rightbranch.txt'
+        with open(OUTPUT_PATH, 'w') as f:
+            logger.info(f'writing to {f.name}')
+            for i in tqdm(sorted(seen)):
+                print(f'op_symbol: {i[0]}, {i[1]}', file=f)
+                #
+                #             op_symbol: i[0], cat: i[2]
+                #                  /              \
+                #                 /                \
+                #           cat: i[3]     op_symbol: i[1], cat: i[4]
+                #                                /       \
+                #                               /         \
+                #                         cat: i[5]     cat: i[6]
+                #
+                stack.append('{' + i[0] + ' ' + i[2] + ' {' + i[3] + ' 1/1/_/_} {' + i[1] + ' ' + i[4] + ' {' + i[5] + ' 2/2/_/_} {' + i[6]+ ' 3/3/_/_}}}')
+            f.write('\n')
+            for i,j in enumerate(read_parsedstring(stack)):
+                f.write(str(i))
+                f.write('\n')
+                f.write(deriv_of(j))
+                f.write('\n')
+
+
     elif args.output == 'reveal':
         reveal_finder = RevealFinder(args.PATH)
 
@@ -180,8 +153,9 @@ if __name__ == '__main__':
                     seen.append(i)
 
         stack = []
-        # outputのpathを指定
-        with open('/Users/kako/B4study-tools/BCCWJ-EyeTrack/data/CombinatorPair/reveal.txt', 'w') as f:
+        OUTPUT_PATH = Path(args.PATH[0]).parent / 'reveal.txt'
+        with open(OUTPUT_PATH, 'w') as f:
+            logger.info(f'writing to {f.name}')
             for i in tqdm(sorted(seen)):
                 print(f'op_symbol: {i[0]}, {i[1]}, {i[2]}', file=f)
                 #
@@ -209,4 +183,16 @@ if __name__ == '__main__':
                 f.write('\n')
 
     else:
-        CombinatorListCreator.create_combinatorlist(args)
+        combinatorlist_creator = CombinatorListCreator(args.PATH)
+
+        pathlist = combinatorlist_creator.path_list
+        for path in tqdm(pathlist):
+            trees = [tree for _, _, tree in read_ccgbank(path)]  # If input format is not Japanese CCGBank, change this function to 'read_parsedtree()'.
+            for tree in tqdm(trees):
+                combinatorlist_creator._traverse(tree)
+
+        OUTPUT_PATH = Path(args.PATH[0]).parent / 'combinators.txt'
+        with open(OUTPUT_PATH, 'w') as f:
+            logger.info(f'writing to {f.name}')
+            for key, value in tqdm(combinatorlist_creator.combinator_dict.items()):
+                print(f'{key} # {str(value)}', file=f)
