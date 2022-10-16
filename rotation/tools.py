@@ -1,8 +1,9 @@
 import re
-from typing import List
+from typing import List, Set
 
 from depccg.cat import Category
 from depccg.tree import Tree
+from depccg.unification import Unification
 
 
 def is_vp(cat: Category) -> bool:
@@ -18,7 +19,7 @@ def is_vp(cat: Category) -> bool:
             and re.match(r'\(*S', s) is not None
             and re.search(r'/', s) is None)
 
-def madeof(cat: Category):
+def madeof(cat: Category) -> Set[Category]:
     s = set()
     def rec(c):
         if c.is_functor:
@@ -51,3 +52,33 @@ def tokens(tree: Tree) -> List[str]:
     result = []
     rec(tree)
     return result
+
+def unification(cat_symbol: str) -> None:
+    global uni
+    match cat_symbol:
+        case '>':
+            uni = Unification("a/b", "b")
+        case '<':
+            uni = Unification("b", "a\\b")
+        case '>B':
+            uni = Unification("a/b", "b/c")
+        case '>B2':
+            uni = Unification("a/b", "(b/c)|d")
+        case '>B3':
+            uni = Unification("a/b", "((b/c)|d)|e")
+        case '<B1':
+            uni = Unification("b\\c", "a\\b")
+        case '<B2':
+            uni = Unification("(b\\c)|d", "a\\b")
+        case '<B3':
+            uni = Unification("((b\\c)|d)|e", "a\\b")
+        case '<B4':
+            uni = Unification("(((b\\c)|d)|e)|f", "a\\b")
+        case '>Bx1':
+            uni = Unification("a/b", "b\\c")
+        case '>Bx2':
+            uni = Unification("a/b", "(b\\c)|d")
+        case '>Bx3':
+            uni = Unification("a/b", "((b\\c)|d)|e")
+        case '>Bx4':
+            uni = Unification("a/b", "(((b\\c)|d)|e)|f")
