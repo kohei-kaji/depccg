@@ -19,4 +19,5 @@ memo
 .DS_Store
 dist
 *.ipynb
-BCCWJparse.py
+trdict.txt
+typeraise_list.py
