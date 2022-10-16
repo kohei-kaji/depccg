@@ -4,17 +4,27 @@
   so special punctuation rules are not necessary.
 """
 
+import re
 import argparse
 from pathlib import Path
 from typing import Dict, Optional
 
 from depccg.cat import Category, Functor
 from depccg.tree import Tree
-from depccg.unification import Unification
+from depccg.types import CombinatorResult
 from depccg.printer.ja import ja_of
+from depccg.grammar.ja import (forward_application,
+                               backward_application,
+                               forward_composition,
+                               generalized_backward_composition1,
+                               generalized_backward_composition2,
+                               generalized_backward_composition3,
+                               generalized_backward_composition4,
+                               generalized_forward_composition1,
+                               generalized_forward_composition2,
+                               generalized_forward_composition3)
 
 from parsed_reader import read_parsedtree
-from clear_features import clear_features
 
 """
 All the original combinators in the Japanese CCGBank are follows;
@@ -39,30 +49,24 @@ cat_to_order: Dict[str, int] = {
 
 order_to_forwardstring: Dict[int, str] = {
             0: 'fa',
-            1: 'fc',
-            2: 'fc2',
-            3: 'fc3'
+            1: 'fc'
 }
 
 order_to_forwardsymbol: Dict[int, str] = {
             0: '>',
-            1: '>B',
-            2: '>B2',
-            3: '>B3'
+            1: '>B'
 }
 
 order_to_forwardcrossedstring: Dict[int, str] = {
             1: 'fx',
             2: 'fx',
-            3: 'fx',
-            4: 'fx'
+            3: 'fx'
 }
 
 order_to_forwardcrossedsymbol: Dict[int, str] = {
             1: '>Bx1',
             2: '>Bx2',
-            3: '>Bx3',
-            4: '>Bx4'
+            3: '>Bx3'
 }
 
 order_to_backwardstring: Dict[int, str] = {
@@ -81,50 +85,50 @@ order_to_backwardsymbol: Dict[int, str] = {
             4: '<B4',
 }
 
-def forward(cat_symbol: str) -> bool:
+def is_forward(cat_symbol: str) -> bool:
     return cat_symbol.startswith('>')
 
-def backward(cat_symbol: str) -> bool:
+def is_backward(cat_symbol: str) -> bool:
     return cat_symbol.startswith('<')
 
-def crossed(cat_symbol: str) -> bool:
+def is_crossed(cat_symbol: str) -> bool:
     return 'x' in cat_symbol
 
-def modifier(cat: Category) -> bool:
+def is_modifier(cat: Category) -> bool:
     return cat.is_functor and cat.left == cat.right and cat.slash == '/'
 
-def post_modifier(cat: Category) -> bool:
+def is_post_modifier(cat: Category) -> bool:
     return cat.is_functor and cat.left == cat.right and cat.slash == '\\'
 
-def unification(cat_symbol: str):
-    global uni
+def most_left_cat(cat: Category) -> str:
+    s = str(cat)
+    if re.match(r'\(*S', s) is not None:
+        return 'S'
+    else:
+        return 'NP'
+
+def unification(cat_symbol: str, left_cat: Category, right_cat: Category) -> Optional[CombinatorResult]:
     match cat_symbol:
         case '>':
-            uni = Unification("a/b", "b")
+            return forward_application(left_cat,right_cat)
         case '<':
-            uni = Unification("b", "a\\b")
+            return backward_application(left_cat,right_cat)
         case '>B':
-            uni = Unification("a/b", "b/c")
-        case '>B2':
-            uni = Unification("a/b", "(b/c)|d")
-        case '>B3':
-            uni = Unification("a/b", "((b/c)|d)|e")
+            return forward_composition(left_cat,right_cat)
         case '<B1':
-            uni = Unification("b\\c", "a\\b")
+            return generalized_backward_composition1(left_cat,right_cat)
         case '<B2':
-            uni = Unification("(b\\c)|d", "a\\b")
+            return generalized_backward_composition2(left_cat,right_cat)
         case '<B3':
-            uni = Unification("((b\\c)|d)|e", "a\\b")
+            return generalized_backward_composition3(left_cat,right_cat)
         case '<B4':
-            uni = Unification("(((b\\c)|d)|e)|f", "a\\b")
+            return generalized_backward_composition4(left_cat,right_cat)
         case '>Bx1':
-            uni = Unification("a/b", "b\\c")
+            return generalized_forward_composition1(left_cat,right_cat)
         case '>Bx2':
-            uni = Unification("a/b", "(b\\c)|d")
+            return generalized_forward_composition2(left_cat,right_cat)
         case '>Bx3':
-            uni = Unification("a/b", "((b\\c)|d)|e")
-        case '>Bx4':
-            uni = Unification("a/b", "(((b\\c)|d)|e)|f")
+            return generalized_forward_composition3(left_cat,right_cat)
 
 # The following rotations are implemented;
 #   1. When top-node and right-node have a forward composition or application,
@@ -164,16 +168,17 @@ def unification(cat_symbol: str):
 #                 /  \                 /  \
 #                b    c               a    b
 
-# Rotate-to-left are implemented in post-order (bottom-up) traversal.
+# - Rotate-to-left are implemented in post-order (bottom-up) traversal.
+#   - An input tree is assumed to have no features.
 def toLeftward(top: Tree) -> Tree:
     if top.is_unary == False:
         a = top.left_child
         right = top.right_child
-        def rebuild(x: int, r: Tree) -> Optional[Tree]:
+        def rebuild(x: int, r: Tree) -> Optional[Tree]:  # When a input tree does not satisfy rotation conditions, always returns 'None'.
             if r.is_unary == False and r.op_symbol != 'SSEQ':  # if node is binary and is not conjunction,
                 y = cat_to_order[r.op_symbol]
                 b, c = r.children
-                if forward(top.op_symbol) and forward(r.op_symbol) and x >= y:
+                if is_forward(top.op_symbol) and is_forward(r.op_symbol) and x >= y:
                     new_leftorder = x-y+1
                     new_toporder = y
                     newleft = rebuild(new_leftorder, b)
@@ -184,7 +189,7 @@ def toLeftward(top: Tree) -> Tree:
                                                 r.op_string,
                                                 r.op_symbol)
                     elif newleft == None:
-                        if crossed(top.op_symbol) or crossed(r.op_symbol):  # if top-node or right-node has crossed composition,
+                        if is_crossed(top.op_symbol) or is_crossed(r.op_symbol):  # if top-node or right-node has crossed composition,
                             if new_toporder == 0:
                                 unification(order_to_forwardcrossedsymbol[new_leftorder])
                                 if uni(clear_features(a.cat), b.cat):
@@ -250,7 +255,7 @@ def toLeftward(top: Tree) -> Tree:
                                                             r.op_symbol)
                                 else:
                                     return None
-                            else:  # if new_top has a functional application,
+                            else:  # if new_top has a functional application,  ## >, >Bx2のようなパターンだが、x≥yを満たしていない
                                 if uni(newleft_cat, c.cat):
                                     newtop_cat = uni["a"]
                                     return Tree.make_binary(newtop_cat,
@@ -266,7 +271,7 @@ def toLeftward(top: Tree) -> Tree:
                                     return None
                     else:
                         return None
-                elif backward(top.op_symbol) and backward(r.op_symbol) and y >= 1:
+                elif is_backward(top.op_symbol) and is_backward(r.op_symbol) and y >= 1:
                     new_leftorder = x
                     new_toporder = x+y-1
                     newleft = rebuild(new_leftorder, b)
@@ -299,7 +304,7 @@ def toLeftward(top: Tree) -> Tree:
                     else:
                         return None
 
-                elif forward(top.op_symbol) and backward(r.op_symbol) and post_modifier(c.cat):
+                elif is_forward(top.op_symbol) and is_backward(r.op_symbol) and is_post_modifier(c.cat):
                     if top.op_symbol == '>':  # if top-node has a forward functional application,
                         new_leftorder = 0
                         new_toporder = 0
@@ -332,10 +337,10 @@ def toLeftward(top: Tree) -> Tree:
                                 return None
                         else:
                             return None
-                    elif modifier(a.cat):
+                    elif is_modifier(a.cat):
                         new_leftorder = x
                         new_toporder = y
-                        if crossed(top.op_symbol):
+                        if is_crossed(top.op_symbol):
                             newleft = rebuild(new_leftorder, b)
                             if isinstance(newleft, Tree):
                                 return Tree.make_binary(top.cat,
