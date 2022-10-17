@@ -86,7 +86,7 @@ order_to_backwardsymbol: Dict[int, str] = {
 }
 
 def is_forward(cat_symbol: str) -> bool:
-    return cat_symbol.startswith('>')
+    return cat_symbol.startswith('>') and 'x' not in cat_symbol
 
 def is_backward(cat_symbol: str) -> bool:
     return cat_symbol.startswith('<')
@@ -189,86 +189,19 @@ def toLeftward(top: Tree) -> Tree:
                                                 r.op_string,
                                                 r.op_symbol)
                     elif newleft == None:
-                        if is_crossed(top.op_symbol) or is_crossed(r.op_symbol):  # if top-node or right-node has crossed composition,
-                            if new_toporder == 0:
-                                unification(order_to_forwardcrossedsymbol[new_leftorder])
-                                if uni(clear_features(a.cat), b.cat):
-                                    newleft_cat = Functor(a.cat.left, "\\", uni["c"])
-                                    newleft_string = order_to_forwardcrossedstring[new_leftorder]
-                                    newleft_symbol = order_to_forwardcrossedsymbol[new_leftorder]
-                                    unification('>')
-                                    if uni(newleft_cat, c.cat):
-                                        newtop_cat = uni["a"]
-                                        return Tree.make_binary(newtop_cat,
-                                                                Tree.make_binary(newleft_cat,
-                                                                                a,
-                                                                                b,
-                                                                                newleft_string,
-                                                                                newleft_symbol),
-                                                                c,
-                                                                'fa',
-                                                                '>')
-                                    else:
-                                        return None
-                                else:
-                                    return None
-                            else:
-                                unification(order_to_forwardsymbol[new_leftorder])
-                                if uni(clear_features(a.cat), b.cat):
-                                    newleft_cat = Functor(a.cat.left, "/", uni["c"])
-                                    newleft_string = order_to_forwardstring[new_leftorder]
-                                    newleft_symbol = order_to_forwardsymbol[new_leftorder]
-                                    unification(order_to_forwardcrossedsymbol[new_toporder])
-                                    if uni(newleft_cat, c.cat):
-                                        newtop_cat = Functor(newleft_cat.left, "\\", uni["c"])
-                                        return Tree.make_binary(newtop_cat,
-                                                                Tree.make_binary(newleft_cat,
-                                                                                a,
-                                                                                b,
-                                                                                newleft_string,
-                                                                                newleft_symbol),
-                                                                c,
-                                                                order_to_forwardcrossedstring[new_toporder],
-                                                                order_to_forwardcrossedsymbol[new_toporder])
-                                    else:
-                                        return None
-                                else:
-                                    return None
-                        else:  # if both nodes have no crossed composition,
-                            unification(order_to_forwardsymbol[new_leftorder])
-                            uni(clear_features(a.cat), b.cat)
-                            newleft_cat = Functor(a.cat.left, "/", uni["c"])
-                            newleft_string = order_to_forwardstring[new_leftorder]
-                            newleft_symbol = order_to_forwardsymbol[new_leftorder]
-                            unification(order_to_forwardsymbol[new_toporder])
-                            if new_toporder >= 1:  # if new_top has a functional composition,
-                                if uni(newleft_cat, c.cat):
-                                    newtop_cat = Functor(newleft_cat.left, "/", uni["c"])
-                                    return Tree.make_binary(newtop_cat,
-                                                            Tree.make_binary(newleft_cat,
-                                                                            a,
-                                                                            b,
-                                                                            newleft_string,
-                                                                            newleft_symbol),
-                                                            c,
-                                                            r.op_string,
-                                                            r.op_symbol)
-                                else:
-                                    return None
-                            else:  # if new_top has a functional application,  ## >, >Bx2のようなパターンだが、x≥yを満たしていない
-                                if uni(newleft_cat, c.cat):
-                                    newtop_cat = uni["a"]
-                                    return Tree.make_binary(newtop_cat,
-                                                            Tree.make_binary(newleft_cat,
-                                                                            a,
-                                                                            b,
-                                                                            newleft_string,
-                                                                            newleft_symbol),
-                                                            c,
-                                                            r.op_string,
-                                                            r.op_symbol)
-                                else:
-                                    return None
+                        newleft_string = order_to_forwardstring[new_leftorder]
+                        newleft_symbol = order_to_forwardsymbol[new_leftorder]
+                        newleft_cat = unification(newleft_symbol,a.cat,b.cat).cat
+                        newtop_cat = unification(r.op_symbol,newleft_cat,c.cat).cat
+                        return Tree.make_binary(newtop_cat,
+                                                Tree.make_binary(newleft_cat,
+                                                                a,
+                                                                b,
+                                                                newleft_string,
+                                                                newleft_symbol),
+                                                c,
+                                                order_to_forwardstring[new_toporder],
+                                                order_to_forwardsymbol[new_toporder])
                     else:
                         return None
                 elif is_backward(top.op_symbol) and is_backward(r.op_symbol) and y >= 1:
@@ -282,98 +215,92 @@ def toLeftward(top: Tree) -> Tree:
                                                 order_to_backwardstring[new_leftorder],
                                                 order_to_backwardsymbol[new_leftorder])
                     elif newleft == None:
-                        unification(order_to_backwardsymbol[new_leftorder])
-                        if uni(clear_features(a.cat), b.cat):
-                            newleft_cat = Functor(a.cat.left, "\\", uni["c"])
-                            unification(order_to_backwardsymbol[new_toporder])
-                            if uni(newleft_cat, c.cat):
-                                newtop_cat = Functor(newleft_cat.left, "\\", uni["c"])
-                                return Tree.make_binary(newtop_cat,
-                                                        Tree.make_binary(newleft_cat,
-                                                                        a,
-                                                                        b,
-                                                                        order_to_backwardstring[new_leftorder],
-                                                                        order_to_backwardsymbol[new_leftorder]),
-                                                        c,
-                                                        order_to_backwardstring[new_toporder],
-                                                        order_to_backwardsymbol[new_toporder])
-                            else:
-                                return None
-                        else:
-                            return None
+                        newleft_string = order_to_backwardstring[new_leftorder]
+                        newleft_symbol = order_to_backwardsymbol[new_leftorder]
+                        newleft_cat = unification(newleft_symbol,a.cat,b.cat).cat
+                        newtop_cat = unification(order_to_backwardsymbol[new_toporder],newleft_cat,c.cat).cat
+                        return Tree.make_binary(newtop_cat,
+                                                Tree.make_binary(newleft_cat,
+                                                                a,
+                                                                b,
+                                                                newleft_string,
+                                                                newleft_symbol),
+                                                c,
+                                                order_to_backwardstring[new_toporder],
+                                                order_to_backwardsymbol[new_toporder])
                     else:
                         return None
 
-                elif is_forward(top.op_symbol) and is_backward(r.op_symbol) and is_post_modifier(c.cat):
-                    if top.op_symbol == '>':  # if top-node has a forward functional application,
-                        new_leftorder = 0
-                        new_toporder = 0
-                        newleft = rebuild(new_leftorder, b)
-                        if isinstance(newleft, Tree):
-                            return Tree.make_binary(top.cat,
-                                                    newleft,
-                                                    c,
-                                                    'ba',
-                                                    '<')
-                        elif newleft == None:
-                            unification('>')
-                            if uni(clear_features(a.cat), b.cat):
-                                newleft_cat = uni["a"]
-                                unification('<')
-                                if uni(newleft_cat, c.cat):
-                                    newtop_cat = uni["b"]
-                                    return Tree.make_binary(newtop_cat,
-                                                            Tree.make_binary(newleft_cat,
-                                                                            a,
-                                                                            b,
-                                                                            'fa',
-                                                                            '>'),
-                                                            c,
-                                                            'ba',
-                                                            '<')
-                                else:
-                                    return None
-                            else:
-                                return None
-                        else:
-                            return None
-                    elif is_modifier(a.cat):
-                        new_leftorder = x
-                        new_toporder = y
-                        if is_crossed(top.op_symbol):
-                            newleft = rebuild(new_leftorder, b)
-                            if isinstance(newleft, Tree):
-                                return Tree.make_binary(top.cat,
-                                                        newleft,
-                                                        c,
-                                                        r.op_string,
-                                                        r.op_symbol)
-                            elif newleft == None:
-                                unification(order_to_forwardcrossedsymbol[new_leftorder])
-                                if uni(clear_features(a.cat), b.cat):
-                                    newleft_cat = Functor(a.cat.left, "\\", uni["c"])
-                                    unification(order_to_backwardsymbol[new_toporder])
-                                    if uni(newleft_cat, c.cat):
-                                        newtop_cat = Functor(newleft_cat.left, "\\", uni["c"])
-                                        return Tree.make_binary(newtop_cat,
-                                                                Tree.make_binary(newleft_cat,
-                                                                                a,
-                                                                                b,
-                                                                                order_to_forwardcrossedstring[new_leftorder],
-                                                                                order_to_forwardcrossedsymbol[new_leftorder]),
-                                                                c,
-                                                                order_to_backwardstring[new_toporder],
-                                                                order_to_backwardsymbol[new_toporder])
-                                    else:
-                                        return None
-                                else:
-                                    return None
-                            else:
-                                return None
-                        else:
-                            return None
-                    else:
-                        return None
+                # elif is_forward(top.op_symbol) and is_backward(r.op_symbol) and is_post_modifier(c.cat):
+                #     if top.op_symbol == '>':  # if top-node has a forward functional application,
+                #         new_leftorder = 0
+                #         new_toporder = 0
+                #         newleft = rebuild(new_leftorder, b)
+                #         if isinstance(newleft, Tree):
+                #             return Tree.make_binary(top.cat,
+                #                                     newleft,
+                #                                     c,
+                #                                     'ba',
+                #                                     '<')
+                #         elif newleft == None:
+                #             unification('>')
+                #             if uni(clear_features(a.cat), b.cat):
+                #                 newleft_cat = uni["a"]
+                #                 unification('<')
+                #                 if uni(newleft_cat, c.cat):
+                #                     newtop_cat = uni["b"]
+                #                     return Tree.make_binary(newtop_cat,
+                #                                             Tree.make_binary(newleft_cat,
+                #                                                             a,
+                #                                                             b,
+                #                                                             'fa',
+                #                                                             '>'),
+                #                                             c,
+                #                                             'ba',
+                #                                             '<')
+                #                 else:
+                #                     return None
+                #             else:
+                #                 return None
+                #         else:
+                #             return None
+                #     elif is_modifier(a.cat):
+                #         new_leftorder = x
+                #         new_toporder = y
+                #         if is_crossed(top.op_symbol):
+                #             newleft = rebuild(new_leftorder, b)
+                #             if isinstance(newleft, Tree):
+                #                 return Tree.make_binary(top.cat,
+                #                                         newleft,
+                #                                         c,
+                #                                         r.op_string,
+                #                                         r.op_symbol)
+                #             elif newleft == None:
+                #                 unification(order_to_forwardcrossedsymbol[new_leftorder])
+                #                 if uni(clear_features(a.cat), b.cat):
+                #                     newleft_cat = Functor(a.cat.left, "\\", uni["c"])
+                #                     unification(order_to_backwardsymbol[new_toporder])
+                #                     if uni(newleft_cat, c.cat):
+                #                         newtop_cat = Functor(newleft_cat.left, "\\", uni["c"])
+                #                         return Tree.make_binary(newtop_cat,
+                #                                                 Tree.make_binary(newleft_cat,
+                #                                                                 a,
+                #                                                                 b,
+                #                                                                 order_to_forwardcrossedstring[new_leftorder],
+                #                                                                 order_to_forwardcrossedsymbol[new_leftorder]),
+                #                                                 c,
+                #                                                 order_to_backwardstring[new_toporder],
+                #                                                 order_to_backwardsymbol[new_toporder])
+                #                     else:
+                #                         return None
+                #                 else:
+                #                     return None
+                #             else:
+                #                 return None
+                #         else:
+                #             return None
+                #     else:
+                #         return None
                 else:
                     return None
             else:
