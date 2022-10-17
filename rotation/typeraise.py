@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+from tqdm import tqdm
 
 from depccg.cat import Category, Functor
 from depccg.tree import Tree
@@ -90,11 +91,10 @@ class TypeRaise(object):
     def create_typeraised_tree(args):
         self = TypeRaise(args.PATH)
 
-        parent = Path(self.filepath).parent
-        textname = str(Path(self.filepath).stem) + '_typeraised'
-        trees = [tree for _, _, tree in read_parsedtree(self.filepath)]
-        with open(parent / textname, 'w') as f:
-            for tree in trees:
+        OUTPUT_PATH = Path(self.filepath).parent / 'typeraised.txt'
+        trees = [tree for _, _, tree in tqdm(read_parsedtree(self.filepath))]
+        with open(OUTPUT_PATH, 'w') as f:
+            for tree in tqdm(trees):
                 tree = self.apply_typeraise(tree)
                 f.write(ja_of(tree))
                 f.write('\n')
