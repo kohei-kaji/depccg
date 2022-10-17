@@ -1,5 +1,5 @@
 import re
-from typing import List, Set
+from typing import Set
 
 from depccg.cat import Category
 from depccg.tree import Tree
@@ -8,10 +8,10 @@ from depccg.unification import Unification
 
 def is_vp(cat: Category) -> bool:
     """
-    A functor category is VP when
+    A functor category is a VP when
         1. it includes just one 'S' category and
         2. it starts with 'S' category and
-        3. it has no forward slash ('/').
+        3. it has no forward slash ('/') in Japanese.
     """
     s = str(cat)
     return (cat.is_functor
@@ -42,7 +42,7 @@ def theSameCats(a: Category, b: Category, c: Category) -> bool:
     union = rec(a).union(rec(b),rec(c))
     return len(union) == 1
 
-def tokens(tree: Tree) -> List[str]:
+def tokens(tree: Tree) -> str:
     def rec(node: Tree):
         if node.is_leaf:
             result.append(node.children[0]['word'])
@@ -51,7 +51,7 @@ def tokens(tree: Tree) -> List[str]:
                 rec(child)
     result = []
     rec(tree)
-    return result
+    return ''.join(result)
 
 def unification(cat_symbol: str) -> None:
     global uni
