@@ -96,7 +96,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('PATH',
                         nargs="*",
-                        type=List[str],
+                        type=Path,
                         help='path to JapaneseCCGBank data file')
     parser.add_argument('--output',
                         help="Choose 'uni' or 'right' or 'reveal. If 'right' is choosen, the combinators of right-branching tree are outputted. If 'reveal' is choosen, the combinators of the tree in which a reveal operation counld be impremented are outputted. Else, all of the combinators are outputted",
