@@ -3,7 +3,7 @@
 # As this brace may be mistaken for the start of a constituent, an unnecessary brace must be discarded.
 # I have not specified the cause of this problem, but I added some code to discard all the braces in op_symbol.
 
-
+import logging
 from typing import Iterator, List, Tuple
 from tqdm import tqdm
 # import re
@@ -12,6 +12,10 @@ from depccg.cat import Category
 from depccg.tree import Tree
 from depccg.types import Token
 from depccg.tools.reader import ReaderResult
+
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+                    level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 # >T combinator is added
@@ -35,6 +39,7 @@ def read_parsedtree(filepath: str) -> Iterator[ReaderResult]:
         Iterator[ReaderResult]: iterator object containing parse results
     """
 
+    logger.info(f'reading {filepath}')
     for i, line in tqdm(enumerate(open(filepath))):
         line = line.strip()
         if len(line) == 0:
