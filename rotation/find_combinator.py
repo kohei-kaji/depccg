@@ -10,7 +10,7 @@ from depccg.printer.deriv import deriv_of
 from depccg.tree import Tree
 
 from parsed_reader import read_parsedtree, read_parsedstring
-from tools import tokens
+# from tools import tokens
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                     level=logging.INFO)
