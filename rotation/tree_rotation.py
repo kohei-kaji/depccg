@@ -11,7 +11,7 @@ from tqdm import tqdm
 from pathlib import Path
 from typing import Dict, Optional
 
-from depccg.cat import Category
+from depccg.cat import Category, Functor
 from depccg.tree import Tree
 from depccg.types import CombinatorResult
 from depccg.unification import Unification
@@ -45,6 +45,7 @@ cat_to_order: Dict[str, int] = {
             '>':0,
             '<':0,
             '>B':1,
+            '>B2':2,
             '<B1':1,
             '<B2':2,
             '<B3':3,
@@ -127,7 +128,8 @@ def unification(cat_symbol: str, left_cat: Category, right_cat: Category) -> Opt
         case '>B2':
             uni = Unification("a/b", "(b/c)|d")
             if uni(left_cat, right_cat):
-                result = left_cat if is_modifier(left_cat) else uni['a'] / uni['c']
+                result = right_cat if is_modifier(left_cat) else left_cat.functor(
+                    uni['a'] / uni['c'], uni['d'])
                 return CombinatorResult(
                     cat=result,
                     op_string="fc",
