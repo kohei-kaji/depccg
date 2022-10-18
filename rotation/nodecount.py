@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 from typing import List
+from collections import defaultdict
 
 import numpy as np
 from depccg.tree import Tree, Token
@@ -47,6 +48,25 @@ def nodecount(filepath: str, trees: List[Tree]):
     arr_counts = np.array(counts, dtype=object)
     results = np.stack([arr_tokens, arr_counts])
     np.savetxt(filepath, results.T, fmt="%s", delimiter=',', newline='\n')
+
+
+class CombinatorCount(object):
+    def __init__(self):
+        self.combinator_dict = defaultdict(int)
+        self.stack = []
+    def traverse(self, node: Tree) -> None:
+        if node.is_leaf == False:
+            children = node.children
+            if len(children) == 1:
+                self.traverse(children[0])
+                self.combinator_dict[node.op_symbol] += 1
+            else:
+                self.traverse(children[0])
+                self.traverse(children[1])
+                self.combinator_dict[node.op_symbol] += 1
+        else:
+            self.stack.append(self.combinator_dict)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
