@@ -1,7 +1,6 @@
 import argparse
 from pathlib import Path
 from typing import List
-from collections import defaultdict
 
 import numpy as np
 from depccg.tree import Tree, Token
@@ -49,23 +48,41 @@ def nodecount(filepath: str, trees: List[Tree]):
     results = np.stack([arr_tokens, arr_counts])
     np.savetxt(filepath, results.T, fmt="%s", delimiter=',', newline='\n')
 
+# top-down traversal
+# class TopDonwCombinatorCount(object):
+#     def __init__(self):
+#         self.combinator_list = []
+#     def traverse(self, node: Tree) -> None:
+#         if node.is_leaf == False:
+#             self.combinator_list.append(node.op_symbol)
+#             children = node.children
+#             if len(children) == 1:
+#                 self.traverse(children[0])
+#             else:
+#                 self.traverse(children[0])
+#                 self.traverse(children[1])
+#         else:
+#             self.combinator_list.append(node.op_symbol)
 
+
+# bottom-up traversal
 class CombinatorCount(object):
     def __init__(self):
-        self.combinator_dict = defaultdict(int)
-        self.stack = []
-    def traverse(self, node: Tree) -> None:
+        self.combinator_list = []
+    def traverse(self, node: Tree) -> List[str]:
         if node.is_leaf == False:
             children = node.children
             if len(children) == 1:
                 self.traverse(children[0])
-                self.combinator_dict[node.op_symbol] += 1
+                self.combinator_list.append(node.op_symbol)
             else:
                 self.traverse(children[0])
                 self.traverse(children[1])
-                self.combinator_dict[node.op_symbol] += 1
+                self.combinator_list.append(node.op_symbol)
         else:
-            self.stack.append(self.combinator_dict)
+            self.combinator_list.append(node.op_symbol)
+        return self.combinator_list
+
 
 
 if __name__ == '__main__':
