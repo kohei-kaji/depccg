@@ -18,12 +18,13 @@ logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s
 logger = logging.getLogger(__name__)
 
 
-# >T combinator is added
+# >T and >B2 combinator is added
 # <Bx1 is not assumed
 combinators = {
     'SSEQ', '>', '<', '>B', '<B1', '<B2', '<B3',
     '<B4', '>Bx1', '>Bx2', '>Bx3',
-    'ADNext', 'ADNint', 'ADV0', 'ADV1', 'ADV2', '>T'
+    'ADNext', 'ADNint', 'ADV0', 'ADV1', 'ADV2',
+    '>T', '>B2'
 }
 
 # DEPENDENCY = re.compile(r'{.+?}')
