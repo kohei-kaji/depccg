@@ -182,15 +182,28 @@ def unification(cat_symbol: str, left_cat: Category, right_cat: Category) -> Opt
 #              /  \                    /  \
 #             β    γ                  α    β
 #
-#       3-3. If α is a modifier (and β and γ are combined by a forward application):
-#           >Bx[x]                       >B[0]
-#           /  \                          /  \
-#          α   >B[0]        =>       >B[x+1]   γ
-#              /  \                    /  \
-#             β    γ                  α    β
+#       3-3. If α is a modifier (and β and γ are combined by a forward application or a forward composition):
+#          3-3-1.
+#               >Bx[x]                       >B[0]
+#               /  \                          /  \
+#             α   >B[0]        =>       >Bx[x+1]   γ
+#                  /  \                    /  \
+#                 β    γ                  α    β
+#          3-3-2.
+#              >Bx[2]                        >B[1]
+#               /  \                          /  \
+#              α   >B[1]        =>       >Bx[2]   γ
+#                  /  \                    /  \
+#                 β    γ                  α    β
 #
 #       3-4. If γ is a post-modifier (and a top-node is constituted by a forward application):
 #           >B[0]                        <B[0]
+#           /  \                          /  \
+#          α   <B[n]        =>        >B[0]   γ
+#              /  \                    /  \
+#             β    γ                  α    β
+#
+#           >B[0]                        <B[1]
 #           /  \                          /  \
 #          α   <B[n]        =>        >B[0]   γ
 #              /  \                    /  \
@@ -335,7 +348,7 @@ def toLeftward(top: Tree) -> Tree:
                                 return None
                         else:
                             return None
-                elif is_modifier(a.cat) and r.op_symbol == '>':  # 3-3
+                elif is_modifier(a.cat) and r.op_symbol == '>':  # 3-3-1
                     new_leftorder = x-y+1
                     new_toporder = 0
                     newleft = rebuild(new_leftorder, b)
@@ -367,9 +380,72 @@ def toLeftward(top: Tree) -> Tree:
                                 return None
                         else:
                             return None
-                elif is_post_modifier(c.cat) and top.op_symbol == '>':  # 3-4
+                elif is_modifier(a.cat) and top.op_symbol == '>Bx2' and r.op_symbol == '>B':  # 3-3-2
+                    new_leftorder = 2
+                    new_toporder = 1
+                    newleft = rebuild(new_leftorder, b)
+                    if isinstance(newleft, Tree):
+                        return Tree.make_binary(top.cat,
+                                                newleft,
+                                                c,
+                                                order_to_forwardstring[new_toporder],
+                                                order_to_forwardsymbol[new_toporder])
+                    else:
+                        newleft_string = order_to_forwardcrossedstring[new_leftorder]
+                        newleft_symbol = order_to_forwardcrossedsymbol[new_leftorder]
+                        newleft_result = unification(newleft_symbol,a.cat,b.cat)
+                        if isinstance(newleft_result, CombinatorResult):
+                            newleft_cat = newleft_result.cat
+                            newtop_result = unification(order_to_forwardsymbol[new_toporder],newleft_cat,c.cat)
+                            if isinstance(newtop_result, CombinatorResult):
+                                newtop_cat = newtop_result.cat
+                                return Tree.make_binary(newtop_cat,
+                                                        Tree.make_binary(newleft_cat,
+                                                                        a,
+                                                                        b,
+                                                                        newleft_string,
+                                                                        newleft_symbol),
+                                                        c,
+                                                        order_to_forwardstring[new_toporder],
+                                                        order_to_forwardsymbol[new_toporder])
+                            else:
+                                return None
+                        else:
+                            return None
+                elif is_post_modifier(c.cat) and top.op_symbol == '>' and a.cat.is_functor and a.cat.left.is_atomic:  # 3-4-1
                     new_leftorder = 0
                     new_toporder = 0
+                    newleft = rebuild(new_leftorder, b)
+                    if isinstance(newleft, Tree):
+                        return Tree.make_binary(top.cat,
+                                                newleft,
+                                                c,
+                                                order_to_backwardstring[new_leftorder],
+                                                order_to_backwardsymbol[new_leftorder])
+                    else:
+                        newleft_string = order_to_forwardstring[new_leftorder]
+                        newleft_symbol = order_to_forwardsymbol[new_leftorder]
+                        newleft_result = unification(newleft_symbol,a.cat,b.cat)
+                        if isinstance(newleft_result, CombinatorResult):
+                            newleft_cat = newleft_result.cat
+                            newtop_result = unification(order_to_backwardsymbol[new_toporder],newleft_cat,c.cat)
+                            if isinstance(newtop_result, CombinatorResult):
+                                newtop_cat = newtop_result.cat
+                                return Tree.make_binary(newtop_cat,
+                                                        Tree.make_binary(newleft_cat,
+                                                                        a,
+                                                                        b,
+                                                                        newleft_string,
+                                                                        newleft_symbol),
+                                                        c,
+                                                        order_to_backwardstring[new_toporder],
+                                                        order_to_backwardsymbol[new_toporder])
+                            else:
+                                return None
+                        else: return None
+                elif is_post_modifier(c.cat) and top.op_symbol == '>' and a.cat.is_functor and a.cat.left.is_functor:  # 3-4-2
+                    new_leftorder = 0
+                    new_toporder = 1
                     newleft = rebuild(new_leftorder, b)
                     if isinstance(newleft, Tree):
                         return Tree.make_binary(top.cat,
