@@ -5,6 +5,30 @@ from depccg.cat import Category
 from depccg.tree import Tree
 from depccg.unification import Unification
 
+def is_pure_forward(cat_symbol: str) -> bool:
+    return cat_symbol.startswith('>') and 'x' not in cat_symbol
+
+def is_forward(cat_symbol: str) -> bool:
+    return cat_symbol.startswith('>')
+
+def is_backward(cat_symbol: str) -> bool:
+    return cat_symbol.startswith('<')
+
+def is_crossed(cat_symbol: str) -> bool:
+    return 'x' in cat_symbol
+
+def is_modifier(cat: Category) -> bool:
+    return cat.is_functor and cat.left == cat.right and cat.slash == '/'
+
+def is_post_modifier(cat: Category) -> bool:
+    return cat.is_functor and cat.left == cat.right and cat.slash == '\\'
+
+def most_left_cat(cat: Category) -> str:
+    s = str(cat)
+    if re.match(r'\(*S', s) is not None:
+        return 'S'
+    else:
+        return 'NP'
 
 def is_vp(cat: Category) -> bool:
     """
