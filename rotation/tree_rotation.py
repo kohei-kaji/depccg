@@ -28,6 +28,10 @@ from depccg.grammar.ja import (forward_application,
                                generalized_forward_composition3)
 
 from parsed_reader import read_parsedtree
+from tools import (is_pure_forward,
+                   is_backward,
+                   is_modifier,
+                   is_post_modifier)
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                     level=logging.INFO)
@@ -94,28 +98,6 @@ order_to_backwardsymbol: Dict[int, str] = {
             3: '<B3',
             4: '<B4',
 }
-
-def is_forward(cat_symbol: str) -> bool:
-    return cat_symbol.startswith('>') and 'x' not in cat_symbol
-
-def is_backward(cat_symbol: str) -> bool:
-    return cat_symbol.startswith('<')
-
-def is_crossed(cat_symbol: str) -> bool:
-    return 'x' in cat_symbol
-
-def is_modifier(cat: Category) -> bool:
-    return cat.is_functor and cat.left == cat.right and cat.slash == '/'
-
-def is_post_modifier(cat: Category) -> bool:
-    return cat.is_functor and cat.left == cat.right and cat.slash == '\\'
-
-def most_left_cat(cat: Category) -> str:
-    s = str(cat)
-    if re.match(r'\(*S', s) is not None:
-        return 'S'
-    else:
-        return 'NP'
 
 def unification(cat_symbol: str, left_cat: Category, right_cat: Category) -> Optional[CombinatorResult]:
     match cat_symbol:
@@ -220,7 +202,7 @@ def toLeftward(top: Tree) -> Tree:
             if r.is_unary == False and r.op_symbol != 'SSEQ':  # if node is binary and is not conjunction,
                 y = cat_to_order[r.op_symbol]
                 b, c = r.children
-                if is_forward(top.op_symbol) and is_forward(r.op_symbol) and x >= y:  # 1
+                if is_pure_forward(top.op_symbol) and is_pure_forward(r.op_symbol) and x >= y:  # 1
                     new_leftorder = x-y+1
                     new_toporder = y
                     newleft = rebuild(new_leftorder, b)
