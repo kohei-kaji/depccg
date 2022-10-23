@@ -4,14 +4,13 @@
   so special punctuation rules are not necessary.
 """
 
-import re
 import logging
 import argparse
 from tqdm import tqdm
 from pathlib import Path
 from typing import Dict, Optional
 
-from depccg.cat import Category, Functor
+from depccg.cat import Category
 from depccg.tree import Tree
 from depccg.types import CombinatorResult
 from depccg.unification import Unification
@@ -133,6 +132,8 @@ def unification(cat_symbol: str, left_cat: Category, right_cat: Category) -> Opt
             return generalized_forward_composition2(left_cat,right_cat)
         case '>Bx3':
             return generalized_forward_composition3(left_cat,right_cat)
+        case _:
+            return None
 
 # The following rotations are implemented;
 #   1. If a top-node and a right-node have a forward composition (not a crossed composition) or application:

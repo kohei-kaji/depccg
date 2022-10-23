@@ -10,6 +10,7 @@ from depccg.printer.deriv import deriv_of
 from depccg.tree import Tree
 
 from parsed_reader import read_parsedtree, read_parsedstring
+from tree_rotation import unification
 # from tools import tokens
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
@@ -177,11 +178,12 @@ if __name__ == '__main__':
                 # {i[0] i[3] {i[4] 1/1/_/_} {i[1] i[5] {i[2] i[6] {i[8] 2/2/_/_} {i[9] 3/3/_/_}} {i[7] 4/4/_/_}}}
                 stack.append('{' + i[0] + ' ' + i[3] + ' {' + i[4] + ' 1/1/_/_} {' + i[1] + ' ' +  i[5] + ' {' + i[2] + ' ' + i[6] + ' {' + i[8] + ' 2/2/_/_} {' + i[9] + ' 3/3/_/_}} {' + i[7] + ' 4/4/_/_}}}')
             f.write('\n')
-            for i,j in tqdm(enumerate(read_parsedstring(stack))):
-                f.write(str(i))
-                f.write('\n')
-                f.write(deriv_of(j))
-                f.write('\n')
+            for i in tqdm(read_parsedstring(stack)):
+                if (unification(i.op_symbol,i.left_child.cat, i.right_child.cat) != None
+                    and unification(i.right_child.op_symbol,i.right_child.left_child.cat, i.right_child.left_child.cat) != None
+                    and unification(i.right_child.left_child.op_symbol,i.right_child.left_child.left_child.cat, i.right_child.left_child.right_child.cat) != None):
+                    f.write(deriv_of(i))
+                    f.write('\n')
 
     else:
         combinatorlist_creator = CombinatorListCreator(args.PATH)
