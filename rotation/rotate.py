@@ -5,7 +5,7 @@
 #                             /NodeCount/typeraised.csv
 #                             /NodeCount/left.csv
 #
-# CCGBank directory -> /devel/ja/right.txt
+# ccgbank directory -> /devel/ja/right.txt
 #                      /devel/ja/typeraised.txt
 #                      /devel/ja/left.txt
 #                      /devel/auto/right.txt
@@ -37,56 +37,55 @@ from ccgbank_reader import read_ccgbank
 from typeraise import TypeRaise
 from tree_rotation import TreeRotation
 
-
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('PATH', type=str, help='path to the parsed text file or CCGBank directory')
+    parser.add_argument('PATH', type=Path, help='path to the parsed text file or ccgbank directory')
     parser.add_argument('--input',
-                        help="Choose 'CCGBank' or 'parsed'. The latter requires a text file of Japanese CCGBank format parsed by depccg.",
-                        choices=['CCGBank', 'parsed'],
-                        default='CCGBank')
+                        help="Choose 'ccgbank' or 'parsed'. The latter requires a text file of Japanese ccgbank format without information about dependencies.",
+                        choices=['ccgbank', 'parsed'],
+                        default='ccgbank')
 
     args = parser.parse_args()
 
     if args.input == 'parsed':
-        parent = Path(args.PATH).parent
-        text_dir = parent / 'text'
-        text_dir.mkdir(parents=True, exist_ok=True)
-        nc_dir = parent / 'NodeCount'
-        nc_dir.mkdir(parents=True, exist_ok=True)
+        PARENT_DIR = Path(args.PATH).parent
+        TEXT_DIR = PARENT_DIR / 'text'
+        TEXT_DIR.mkdir(parents=True, exist_ok=True)
+        NC_DIR = PARENT_DIR / 'NodeCount'
+        NC_DIR.mkdir(parents=True, exist_ok=True)
 
         trees = [tree for _, _, tree in read_parsedtree(args.PATH)]
-        text_right = text_dir / 'right.txt'
-        trees_to_ja(text_right, trees)
-        nc_right = nc_dir / 'right.csv'
-        nodecount(nc_right, trees)
+        TEXT_RIGHT = TEXT_DIR / 'right.txt'
+        trees_to_ja(TEXT_RIGHT, trees)
+        NC_RIGHT = NC_DIR / 'right.csv'
+        nodecount(NC_RIGHT, trees)
 
         typeraised_trees = [TypeRaise.apply_typeraise(tree) for tree in trees]
-        text_tr = text_dir / 'typeraised.txt'
-        trees_to_ja(text_tr, typeraised_trees)
-        nc_tr = nc_dir / 'typeraised.csv'
-        nodecount(nc_tr, typeraised_trees)
+        TEXT_TR = TEXT_DIR / 'typeraised.txt'
+        trees_to_ja(TEXT_TR, typeraised_trees)
+        NC_TR = NC_DIR / 'typeraised.csv'
+        nodecount(NC_TR, typeraised_trees)
 
         leftbranched_trees = [TreeRotation.rotate(tree) for tree in typeraised_trees]
-        text_left = text_dir / 'left.txt'
-        trees_to_ja(text_left, leftbranched_trees)
-        nc_left = nc_dir / 'left.csv'
-        nodecount(nc_left, leftbranched_trees)
+        TEXT_LEFT = TEXT_DIR / 'left.txt'
+        trees_to_ja(TEXT_LEFT, leftbranched_trees)
+        NC_LEFT = NC_DIR / 'left.csv'
+        nodecount(NC_LEFT, leftbranched_trees)
 
 
     else:
-        parent = Path(args.PATH)
+        PARENT_DIR = Path(args.PATH)
 
-        devel = parent / 'devel.ccgbank'
-        test = parent / 'test.ccgbank'
-        train = parent / 'train.ccgbank'
+        devel = PARENT_DIR / 'devel.ccgbank'
+        test = PARENT_DIR / 'test.ccgbank'
+        train = PARENT_DIR / 'train.ccgbank'
 
-        DEVEL_JA = parent / 'devel/ja/'
-        DEVEL_AUTO = parent / 'devel/auto/'
-        TEST_JA = parent / 'test/ja/'
-        TEST_AUTO = parent / 'test/auto/'
-        TRAIN_JA = parent / 'train/ja/'
-        TRAIN_AUTO = parent / 'train/auto/'
+        DEVEL_JA = PARENT_DIR/ 'devel/ja/'
+        DEVEL_AUTO = PARENT_DIR / 'devel/auto/'
+        TEST_JA = PARENT_DIR / 'test/ja/'
+        TEST_AUTO = PARENT_DIR / 'test/auto/'
+        TRAIN_JA = PARENT_DIR / 'train/ja/'
+        TRAIN_AUTO = PARENT_DIR / 'train/auto/'
 
         DEVEL_JA.mkdir(parents=True)
         DEVEL_AUTO.mkdir()
@@ -125,3 +124,7 @@ if __name__ == '__main__':
         trees = [TreeRotation.rotate(tree) for tree in trees]
         trees_to_ja(str(TRAIN_JA/'left.txt'), trees)
         trees_to_auto(str(TRAIN_AUTO/'left.txt'), trees)
+
+
+if __name__ == '__main__':
+    main()
