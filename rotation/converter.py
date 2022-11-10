@@ -1,4 +1,5 @@
 import argparse
+import numpy as np
 from typing import List
 
 from depccg.utils import denormalize
@@ -98,8 +99,9 @@ if __name__ == '__main__':
             output_name = parent + '/' + file + '_auto'
             trees_to_auto(output_name, trees)
         else:
-            output_name = parent + '/' + file + '.html'
-            ja_to_html(output_name, trees)
+            for id, trees in enumerate(np.array_split(trees, 4)):
+                output_name = parent + '/' + file + str(id) + '.html'
+                ja_to_html(output_name, trees)
 
     else:
         trees = [tree for _, _, tree in read_ccgbank(args.FILE)]
