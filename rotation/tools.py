@@ -131,15 +131,23 @@ def can_combine(l: Functor, r: Category) -> bool:
 def left_spine(tree: Tree) -> List[Category]:
     def rec(node: Tree):
         if node.is_leaf == False:
+            l_spine.append(node.cat)
             children = node.children
             if len(children) == 1:
                 rec(children[0])
-                l_spine.append(node.cat)
             else:
                 rec(children[0])
-                l_spine.append(node.cat)
-        else:
-            l_spine.append(node.cat)
     l_spine = []
-    l = rec(tree)
-    return l.reverse()
+    return rec(tree)
+
+def right_spine(tree: Tree) -> List[Category]:
+    def rec(node: Tree):
+        if node.is_leaf == False:
+            r_spine.append(node.cat)
+            children = node.children
+            if len(children) == 1:
+                rec(children[0])
+            else:
+                rec(children[1])
+    r_spine = []
+    return rec(tree)
