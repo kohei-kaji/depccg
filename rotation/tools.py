@@ -128,26 +128,45 @@ def can_combine(l: Functor, r: Category) -> bool:
                 else:
                     return l.left == r.right
 
-def left_spine(tree: Tree) -> List[Category]:
-    def rec(node: Tree):
+# obtain the nodes in a left- or right-spine position in bottom-up traversal
+class LeftSpine(object):
+    def __init__(self):
+        self.leftspine_list = []
+    def traverse(self, node: Tree) -> None:
         if node.is_leaf == False:
-            l_spine.append(node.cat)
             children = node.children
             if len(children) == 1:
-                rec(children[0])
+                self.traverse(children[0])
+                self.leftspine_list.append(node.cat)
             else:
-                rec(children[0])
-    l_spine = []
-    return rec(tree)
+                self.traverse(children[0])
+                self.leftspine_list.append(node.cat)
+        else:
+            self.leftspine_list.append(node.cat)
 
-def right_spine(tree: Tree) -> List[Category]:
-    def rec(node: Tree):
+    @staticmethod
+    def output(tree: Tree) -> List[Category]:
+        self = LeftSpine()
+        self.traverse(tree)
+        return self.leftspine_list
+
+class RightSpine(object):
+    def __init__(self):
+        self.rightspine_list = []
+    def traverse(self, node: Tree) -> None:
         if node.is_leaf == False:
-            r_spine.append(node.cat)
             children = node.children
             if len(children) == 1:
-                rec(children[0])
+                self.traverse(children[0])
+                self.rightspine_list.append(node.cat)
             else:
-                rec(children[1])
-    r_spine = []
-    return rec(tree)
+                self.traverse(children[1])
+                self.rightspine_list.append(node.cat)
+        else:
+            self.rightspine_list.append(node.cat)
+
+    @staticmethod
+    def output(tree: Tree) -> List[Category]:
+        self = RightSpine()
+        self.traverse(tree)
+        return self.rightspine_list
