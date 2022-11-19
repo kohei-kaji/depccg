@@ -128,6 +128,10 @@ def can_combine(l: Functor, r: Category) -> bool:
                 else:
                     return l.left == r.right
 
+# def can_rotate_right(tree: Tree) -> bool:
+#     match tree.op_symbol:
+#         case
+
 # obtain the nodes in a left- or right-spine position in bottom-up traversal
 class LeftSpine(object):
     def __init__(self):
