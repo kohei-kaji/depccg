@@ -95,13 +95,13 @@ class CombinatorCount(object):
     @staticmethod
     def make_csv(trees: List[Tree], OUTPUT_PATH: str) -> None:
         self = CombinatorCount()
-        logger.info('traversing trees')
+        logger.info('traverse trees')
         for tree in tqdm(trees):
             self.traverse(tree)
 
         stack = ['<lex>']
         output_list = []
-        logger.info('corresponding combinators to each terminal')
+        logger.info('make combinators correspond to each terminal')
         for i in tqdm(self.combinator_list):
             if i == '<lex>':
                 output_list.append(stack)
@@ -113,7 +113,7 @@ class CombinatorCount(object):
 
         binary_count = []
         # logger.info('remove <lex>')
-        logger.info('counting binary combinators')
+        logger.info('count binary combinators')
         for i in tqdm(output_list):
             binary_count.append(str(i.count('>')
                                 + i.count('<')
@@ -140,19 +140,18 @@ class RevealCombinatorCount(object):
     def __init__(self):
         self.combinator_list = []
         self.adnominal_list = []
-        self.adnominal_tokens  = []
-        self.adnominal_count = 0
-    def traverse(self, node: Tree) -> None:
-        if node.is_leaf == False:
-            if node.is_unary:
-                self.traverse(node.child)
-                self.combinator_list.append(node.op_symbol)
-            else:
-                self.traverse(node.left_child)
-                self.traverse(node.right_child)
-                self.combinator_list.append(node.op_symbol)
-        else:
-            self.combinator_list.append(node.op_symbol)
+        # self.adnominal_tokens  = []
+        # self.adnominal_count = 0
+    # def traverse(self, node: Tree) -> None:
+    #     if node.is_leaf == False:
+    #         if node.is_unary:
+    #             self.traverse(node.child)
+    #             self.combinator_list.append(node.op_symbol)
+    #         else:    #             self.traverse(node.left_child)
+    #             self.traverse(node.right_child)
+    #             self.combinator_list.append(node.op_symbol)
+    #     else:
+    #         self.combinator_list.append(node.op_symbol)
 
     def adnominal_traverse(self, node: Tree) -> None:
         self.tokens = node.tokens
@@ -160,38 +159,33 @@ class RevealCombinatorCount(object):
             if node.is_unary:
                 if node.op_symbol.startswith('ADN'):  # Adnominal form (連体修飾形); ADNint, ADNext
                     self.adnominal_list.append(LeftSpine.output(node))
-                    self.adnominal_tokens.append(node.tokens)
-                    self.adnominal_count += 1
-                self.adnominal_traverse(node.child)
-            else:
-                self.adnominal_traverse(node.left_child)
-                self.adnominal_traverse(node.right_child)
-        else:
-            self.combinator_list.append(node.op_symbol)
-        # yield self.adnominal_list
+                    if can_combine(self.combinator_list[-1], self.adnominal_list[-1][-1]):
+                        self.combinator_list.append('ROTATE')
+                    else:
+                        print([self.combinator_list[-1], self.adnominal_list[-1][-1]])
+                    # self.adnominal_tokens.append(node.tokens)
+                    # self.adnominal_count += 1
 
-    def adnominal_combine(self, node: Tree):
-        if node.is_leaf == False:
-            if node.is_unary:
-                if node.op_symbol.startswith('ADN'):
-                    LeftSpine.output(node)
                 self.adnominal_traverse(node.child)
+                self.combinator_list.append(node.op_symbol)
             else:
                 self.adnominal_traverse(node.left_child)
                 self.adnominal_traverse(node.right_child)
+                self.combinator_list.append(node.op_symbol)
         else:
             self.combinator_list.append(node.op_symbol)
+
 
     @staticmethod
     def make_csv(trees: List[Tree], OUTPUT_PATH: str) -> None:
         self = RevealCombinatorCount()
-        logger.info('traversing trees')
+        logger.info('traverse trees')
         for tree in tqdm(trees):
             self.adnominal_traverse(tree)
 
         stack = ['<lex>']
         output_list = []
-        logger.info('corresponding combinators to each terminal')
+        logger.info('make combinators correspond to each terminal')
         for i in tqdm(self.combinator_list):
             if i == '<lex>':
                 output_list.append(stack)
@@ -201,24 +195,31 @@ class RevealCombinatorCount(object):
         output_list.append(stack)
         output_list = output_list[1:]
 
-
-        binary_count = []
-        logger.info('counting binary combinators by reveal traversal')
+        reveal_count = []  # ADNのmost left-spineがその前のcategoryとcombineできるとき、left-spineに1, right-spineに2加えている (rotateとunary)
+        logger.info('count reveal steps')
+        rotate_occur = 0
         for i in tqdm(output_list):
-            binary_count.append(str(i.count('>')
-                                + i.count('<')
-                                + i.count('>B')
-                                + i.count('<B1')
-                                + i.count('<B2')
-                                + i.count('<B3')
-                                + i.count('<B4')
-                                + i.count('>Bx1')
-                                + i.count('>Bx2')
-                                + i.count('>Bx3')
-                                + i.count('>B2')
-                                + i.count('SSEQ')))
-        binary_count = np.array(binary_count)
-        df = pd.DataFrame(np.stack([binary_count],1), columns=['binary combinators'])
+            if 'ROTATE' in i:
+                rotate_occur += 1
+            count = str(i.count('ROTATE')
+                        + i.count('>')
+                        + i.count('<')
+                        + i.count('>B')
+                        + i.count('<B1')
+                        + i.count('<B2')
+                        + i.count('<B3')
+                        + i.count('<B4')
+                        + i.count('>Bx1')
+                        + i.count('>Bx2')
+                        + i.count('>Bx3')
+                        + i.count('>B2')
+                        + i.count('SSEQ'))
+            if rotate_occur == 1 and 'ANDint' in i:
+                rotate_occur -= 1
+                count += 1
+            reveal_count.append(count)
+        reveal_count = np.array(reveal_count)
+        df = pd.DataFrame(np.stack([reveal_count],1), columns=['reveal count'])
         logger.info(f'writing to {OUTPUT_PATH}')
         df.to_csv(OUTPUT_PATH, index=False)
 

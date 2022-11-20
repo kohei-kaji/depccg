@@ -1,5 +1,5 @@
 import re
-from typing import Set, List
+from typing import Set, List, Optional
 
 from depccg.cat import Category, Functor
 from depccg.tree import Tree
@@ -108,25 +108,30 @@ def unification(cat_symbol: str) -> None:
             uni = Unification("a/b", "(((b\\c)|d)|e)|f")
 
 # On the assumption that there is no backward function application (<), an l (left) category is always a complex category.
-def can_combine(l: Functor, r: Category) -> bool:
-    assert l.is_functor, "l must be a complex category."
-    match l.slash:
-        case '/':
-            if l.right.is_atomic:
-                return str(l.right) == most_left_cat(r)
-            else:
-                if r.is_atomic:
-                    return l.right == r
+def can_combine(l: Optional[str], r: str) -> bool:
+    if l == None:
+        return True
+    else:
+        l = Category.parse(l)
+        r = Category.parse(r)
+        assert l.is_functor, "l must be a complex category."
+        match l.slash:
+            case '/':
+                if l.right.is_atomic:
+                    return str(l.right) == most_left_cat(r)
                 else:
-                    return l.right == r.left
-        case '\\':
-            if r.is_atomic:
-                return False
-            else:
-                if r.slash == '/':
+                    if r.is_atomic:
+                        return l.right == r
+                    else:
+                        return l.right == r.left
+            case '\\':
+                if r.is_atomic:
                     return False
                 else:
-                    return l.left == r.right
+                    if r.slash == '/':
+                        return False
+                    else:
+                        return l.left == r.right
 
 # def can_rotate_right(tree: Tree) -> bool:
 #     match tree.op_symbol:
