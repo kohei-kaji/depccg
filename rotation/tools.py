@@ -108,13 +108,10 @@ def unification(cat_symbol: str) -> None:
             uni = Unification("a/b", "(((b\\c)|d)|e)|f")
 
 # On the assumption that there is no backward function application (<), an l (left) category is always a complex category.
-def can_combine(l: Optional[str], r: str) -> bool:
-    if l == None:
-        return True
+def can_combine(l: Optional[Category], r: Functor) -> bool:
+    if l.is_atomic:
+        return False
     else:
-        l = Category.parse(l)
-        r = Category.parse(r)
-        assert l.is_functor, "l must be a complex category."
         match l.slash:
             case '/':
                 if l.right.is_atomic:

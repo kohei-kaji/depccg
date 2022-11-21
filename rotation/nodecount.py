@@ -139,6 +139,7 @@ class CombinatorCount(object):
 class RevealCombinatorCount(object):
     def __init__(self):
         self.combinator_list = []
+        self.category_list = []
         self.adnominal_list = []
         # self.adnominal_tokens  = []
         # self.adnominal_count = 0
@@ -159,21 +160,24 @@ class RevealCombinatorCount(object):
             if node.is_unary:
                 if node.op_symbol.startswith('ADN'):  # Adnominal form (連体修飾形); ADNint, ADNext
                     self.adnominal_list.append(LeftSpine.output(node))
-                    if can_combine(self.combinator_list[-1], self.adnominal_list[-1][-1]):
+                    if can_combine(self.category_list[-1], self.adnominal_list[-1][-1]):
                         self.combinator_list.append('ROTATE')
                     else:
-                        print([self.combinator_list[-1], self.adnominal_list[-1][-1]])
+                        print([self.category_list[-1], self.adnominal_list[-1][-1]])
                     # self.adnominal_tokens.append(node.tokens)
                     # self.adnominal_count += 1
 
                 self.adnominal_traverse(node.child)
                 self.combinator_list.append(node.op_symbol)
+                self.category_list.append(node.cat)
             else:
                 self.adnominal_traverse(node.left_child)
                 self.adnominal_traverse(node.right_child)
                 self.combinator_list.append(node.op_symbol)
+                self.category_list.append(node.cat)
         else:
             self.combinator_list.append(node.op_symbol)
+            self.category_list.append(node.cat)
 
 
     @staticmethod
