@@ -136,6 +136,23 @@ class CombinatorCount(object):
 
 # If the terminal node of ADN of left edge can be combine with the left sub-tree which is already created,
 # CombinatorCount 1 is added to the left edge terminal node, and RotationCount 1 to the right edge terminal node.
+#  Hanako-ga    Taro-o       nagutta     otoko-o
+#  ---------  -----------   ---------   ---------
+#     NP^         NP^       (S\NP)\NP      NP
+#  --------------------->B
+#      S/((S\NP)\NP)
+#  ---------------------------------->
+#                  S
+#  ---------------------------[rotate]
+#  ---------  -----------------------
+#   S/(S\NP)           S\NP
+#             -------------------[ADN]
+#                     NP/NP
+#             ---------------------------------->
+#                            NP^
+#  --------------------------------------------->B
+#                 S/((S\NP)\NP)
+
 class RevealCombinatorCount(object):
     def __init__(self):
         self.combinator_list = []
