@@ -136,7 +136,6 @@ class CombinatorCount(object):
 
 # In contrast to Stanojevic et al. (2021; 2022), the operation, Rotate-to-right, will happen only when it is necessary.
 # That is, when the unary rules, ADNint or ADNext, is applied, as follows;
-#      0          0            1           2
 #      0          1            1       2 + rotate(=1)
 #  Hanako-ga    Taro-o      nagutta     otoko-o
 #  ---------  ----------   ---------   ---------
@@ -173,7 +172,7 @@ def most_left_cat(cat: Category) -> str:
     else:
         return 'NP'
 
-def can_combine(l, r) -> bool:
+def can_combine(l: str, r: str) -> bool:
     l = Category.parse(l)
     r = Category.parse(r)
     if l.is_atomic:
@@ -233,7 +232,7 @@ class RevealCombinatorCount(object):
             self.td_combinator_list.append(node.op_symbol)
 
     @staticmethod
-    def make_csv(trees: List[Tree]) -> None:
+    def make_csv(trees: List[Tree], OUTPUT_PATH: str) -> None:
         reveal_counts = []
         for tree in tqdm(trees):
             self = RevealCombinatorCount()
@@ -241,8 +240,8 @@ class RevealCombinatorCount(object):
             self.topdown_traverse(tree)
 
             stack = []
-            bu_combinator_list: List[List[str]] = []
-            for i in tqdm(self.bu_combinator_list):
+            bu_combinator_list = []
+            for i in self.bu_combinator_list:
                 if i == "<lex>":
                     bu_combinator_list.append(stack)
                     stack = []
@@ -252,8 +251,8 @@ class RevealCombinatorCount(object):
             bu_combinator_list = bu_combinator_list[1:]
 
             stack = []
-            bu_category_list: List[List[str]] = []
-            for i in tqdm(self.bu_category_list):
+            bu_category_list = []
+            for i in self.bu_category_list:
                 if i == "terminal":
                     bu_category_list.append(stack)
                     stack = []
@@ -263,8 +262,8 @@ class RevealCombinatorCount(object):
             bu_category_list = bu_category_list[1:]
 
             stack = []
-            td_combinator_list: List[List[str]] = []
-            for i in tqdm(self.td_combinator_list):
+            td_combinator_list = []
+            for i in self.td_combinator_list:
                 if i == "<lex>":
                     td_combinator_list.append(stack)
                     stack = []
@@ -280,8 +279,14 @@ class RevealCombinatorCount(object):
                 while counter != adn_count:
                     for combinators in bu_combinator_list:
                         if 'ADNint' in combinators:
-                            combinators.remove('ADNint')
-                            counter += 1
+                            if combinators.count('ADNint') <= adn_count-counter:
+                                combinators = [combinator for combinator in combinators if combinator != 'ADNint']
+                                counter = adn_count
+                            else:
+                                while adn_count-counter != 0:
+                                    combinators.remove('ADNint')
+                                    counter += 1
+
             for pointer, bu_combinators in enumerate(bu_combinator_list[:-1]):
                 if 'ADNint' in bu_combinators:
                     if ('>' in bu_combinators
@@ -296,11 +301,11 @@ class RevealCombinatorCount(object):
                         or '>Bx3' in bu_combinators
                         or '>B2' in bu_combinators
                         or 'SSEQ' in bu_combinators):
-                        reveal_count[pointer+1] = 1
+                        reveal_count[pointer+1] += 1
             for pointer, td_combinators in enumerate(td_combinator_list):
                 if 'ADNint' in td_combinators:
                     if can_combine(bu_category_list[pointer-1][-1], bu_category_list[pointer][-1]):
-                        reveal_count[pointer] = 1
+                        reveal_count[pointer] += 1
 
             reveal_counts.append(reveal_count)
 
@@ -320,6 +325,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     parent = str(Path(args.FILE).parent)
     file = str(Path(args.FILE).stem)
-    OUTPUT_PATH = parent + '/' + file + '_combinators.csv'
+    # OUTPUT_PATH = parent + '/' + file + '_combinators.csv'
+    OUTPUT_PATH = parent + '/' + file + '_reveal.csv'
     trees = [tree for _, _, tree in read_parsedtree(args.FILE)]
-    CombinatorCount.make_csv(trees, OUTPUT_PATH)
+    # CombinatorCount.make_csv(trees, OUTPUT_PATH)
+    RevealCombinatorCount.make_csv(trees, OUTPUT_PATH)
