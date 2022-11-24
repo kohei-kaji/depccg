@@ -1,3 +1,4 @@
+import re
 import logging
 import argparse
 from pathlib import Path
@@ -6,10 +7,9 @@ from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
+from depccg.cat import Category
 from depccg.tree import Tree, Token
 from parsed_reader import read_parsedtree
-from rotation.typeraise import typeraise
-from tools import can_combine, LeftSpine
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                     level=logging.INFO)
@@ -134,12 +134,14 @@ class CombinatorCount(object):
         logger.info(f'writing to {OUTPUT_PATH}')
         df.to_csv(OUTPUT_PATH, index=False)
 
-# If the terminal node of ADN of left edge can be combine with the left sub-tree which is already created,
-# CombinatorCount 1 is added to the left edge terminal node, and RotationCount 1 to the right edge terminal node.
-#  Hanako-ga    Taro-o       nagutta     otoko-o
-#  ---------  -----------   ---------   ---------
-#     NP^         NP^       (S\NP)\NP      NP
-#  --------------------->B
+# In contrast to Stanojevic et al. (2021; 2022), the operation, Rotate-to-right, will happen only when it is necessary.
+# That is, when the unary rules, ADNint or ADNext, is applied, as follows;
+#      0          0            1           2
+#      0          1            1       2 + rotate(=1)
+#  Hanako-ga    Taro-o      nagutta     otoko-o
+#  ---------  ----------   ---------   ---------
+#     NP^         NP^      (S\NP)\NP       NP
+#  -------------------->B
 #      S/((S\NP)\NP)
 #  ---------------------------------->
 #                  S
@@ -152,98 +154,159 @@ class CombinatorCount(object):
 #                            NP^
 #  --------------------------------------------->B
 #                 S/((S\NP)\NP)
+#
+# I focus on the fact that top-down traversal can detect the left-spine of a constituent,
+# and bottom-up traversal can detect the right-spine of a constituent.
+#
+# Now, I call the constituent including 'ADNint' an 'ADN constituent'.
+# The terminal node of the left-spine of an ADN constituent is added 1 to, when
+#   (1) the terminal node is not the beggining of a sentence, and
+#   (2) the terminal node can combine with the category already constructed in bottom-up traversal
+# On the other hand, the terminal node located in the right of the right-spine of an ADN constituent is added [rotation count] to, when
+#   (1) there is at least one binary composition under ADN, and
+#   (2) the ADN constituent is not the end of a sentence.
+
+def most_left_cat(cat: Category) -> str:
+    s = str(cat)
+    if re.match(r'\(*S', s) is not None:
+        return 'S'
+    else:
+        return 'NP'
+
+def can_combine(l, r) -> bool:
+    l = Category.parse(l)
+    r = Category.parse(r)
+    if l.is_atomic:
+        return False
+    else:
+        match l.slash:
+            case '/':
+                if l.right.is_atomic:
+                    return str(l.right) == most_left_cat(r)
+                else:
+                    if r.is_atomic:
+                        return l.right == r
+                    else:
+                        return l.right == r.left
+            case '\\':
+                if r.is_atomic:
+                    return False
+                else:
+                    if r.slash == '/':
+                        return False
+                    else:
+                        return l.left == r.right
 
 class RevealCombinatorCount(object):
     def __init__(self):
-        self.combinator_list = []
-        self.category_list = []
-        self.adnominal_list = []
-        # self.adnominal_tokens  = []
-        # self.adnominal_count = 0
-    # def traverse(self, node: Tree) -> None:
-    #     if node.is_leaf == False:
-    #         if node.is_unary:
-    #             self.traverse(node.child)
-    #             self.combinator_list.append(node.op_symbol)
-    #         else:    #             self.traverse(node.left_child)
-    #             self.traverse(node.right_child)
-    #             self.combinator_list.append(node.op_symbol)
-    #     else:
-    #         self.combinator_list.append(node.op_symbol)
+        self.bu_combinator_list = []
+        self.bu_category_list = []
+        self.td_combinator_list = []
 
-    def adnominal_traverse(self, node: Tree) -> None:
-        self.tokens = node.tokens
+    def bottomup_traverse(self, node: Tree) -> None:
         if node.is_leaf == False:
-            if node.is_unary:
-                if node.op_symbol.startswith('ADN'):  # Adnominal form (連体修飾形); ADNint, ADNext
-                    self.adnominal_list.append(LeftSpine.output(node))
-                    if can_combine(self.category_list[-1], self.adnominal_list[-1][-1]):
-                        self.combinator_list.append('ROTATE')
-                    else:
-                        print([self.category_list[-1], self.adnominal_list[-1][-1]])
-                    # self.adnominal_tokens.append(node.tokens)
-                    # self.adnominal_count += 1
-
-                self.adnominal_traverse(node.child)
-                self.combinator_list.append(node.op_symbol)
-                self.category_list.append(node.cat)
+            children = node.children
+            if len(children) == 1:
+                self.bottomup_traverse(children[0])
+                self.bu_combinator_list.append(node.op_symbol)
+                self.bu_category_list.append(str(node.cat))
             else:
-                self.adnominal_traverse(node.left_child)
-                self.adnominal_traverse(node.right_child)
-                self.combinator_list.append(node.op_symbol)
-                self.category_list.append(node.cat)
+                self.bottomup_traverse(children[0])
+                self.bottomup_traverse(children[1])
+                self.bu_combinator_list.append(node.op_symbol)
+                self.bu_category_list.append(str(node.cat))
         else:
-            self.combinator_list.append(node.op_symbol)
-            self.category_list.append(node.cat)
+            self.bu_combinator_list.append(node.op_symbol)
+            self.bu_category_list.append('terminal')
+            self.bu_category_list.append(str(node.cat))
 
+    def topdown_traverse(self, node: Tree) -> None:
+        if node.is_leaf == False:
+            self.td_combinator_list.append(node.op_symbol)
+            children = node.children
+            if len(children) == 1:
+                self.topdown_traverse(children[0])
+            else:
+                self.topdown_traverse(children[0])
+                self.topdown_traverse(children[1])
+        else:
+            self.td_combinator_list.append(node.op_symbol)
 
     @staticmethod
-    def make_csv(trees: List[Tree], OUTPUT_PATH: str) -> None:
-        self = RevealCombinatorCount()
-        logger.info('traverse trees')
+    def make_csv(trees: List[Tree]) -> None:
+        reveal_counts = []
         for tree in tqdm(trees):
-            self.adnominal_traverse(tree)
+            self = RevealCombinatorCount()
+            self.bottomup_traverse(tree)
+            self.topdown_traverse(tree)
 
-        stack = ['<lex>']
-        output_list = []
-        logger.info('make combinators correspond to each terminal')
-        for i in tqdm(self.combinator_list):
-            if i == '<lex>':
-                output_list.append(stack)
-                stack = ['<lex>']
-            else:
-                stack.append(i)
-        output_list.append(stack)
-        output_list = output_list[1:]
+            stack = []
+            bu_combinator_list: List[List[str]] = []
+            for i in tqdm(self.bu_combinator_list):
+                if i == "<lex>":
+                    bu_combinator_list.append(stack)
+                    stack = []
+                else:
+                    stack.append(i)
+            bu_combinator_list.append(stack)
+            bu_combinator_list = bu_combinator_list[1:]
 
-        reveal_count = []  # ADNのmost left-spineがその前のcategoryとcombineできるとき、left-spineに1, right-spineに2加えている (rotateとunary)
-        logger.info('count reveal steps')
-        rotate_occur = 0
-        for i in tqdm(output_list):
-            if 'ROTATE' in i:
-                rotate_occur += 1
-            count = str(i.count('ROTATE')
-                        + i.count('>')
-                        + i.count('<')
-                        + i.count('>B')
-                        + i.count('<B1')
-                        + i.count('<B2')
-                        + i.count('<B3')
-                        + i.count('<B4')
-                        + i.count('>Bx1')
-                        + i.count('>Bx2')
-                        + i.count('>Bx3')
-                        + i.count('>B2')
-                        + i.count('SSEQ'))
-            if rotate_occur == 1 and 'ANDint' in i:
-                rotate_occur -= 1
-                count += 1
-            reveal_count.append(count)
-        reveal_count = np.array(reveal_count)
-        df = pd.DataFrame(np.stack([reveal_count],1), columns=['reveal count'])
-        logger.info(f'writing to {OUTPUT_PATH}')
+            stack = []
+            bu_category_list: List[List[str]] = []
+            for i in tqdm(self.bu_category_list):
+                if i == "terminal":
+                    bu_category_list.append(stack)
+                    stack = []
+                else:
+                    stack.append(i)
+            bu_category_list.append(stack)
+            bu_category_list = bu_category_list[1:]
+
+            stack = []
+            td_combinator_list: List[List[str]] = []
+            for i in tqdm(self.td_combinator_list):
+                if i == "<lex>":
+                    td_combinator_list.append(stack)
+                    stack = []
+                else:
+                    stack.append(i)
+            td_combinator_list.append(stack)
+            td_combinator_list.pop()
+
+            reveal_count = [0]*len(bu_combinator_list)
+            if 'ADNint' in td_combinator_list[0]:
+                adn_count = td_combinator_list[0].count('ADNint')
+                counter = 0
+                while counter != adn_count:
+                    for combinators in bu_combinator_list:
+                        if 'ADNint' in combinators:
+                            combinators.remove('ADNint')
+                            counter += 1
+            for pointer, bu_combinators in enumerate(bu_combinator_list[:-1]):
+                if 'ADNint' in bu_combinators:
+                    if ('>' in bu_combinators
+                        or '<' in bu_combinators
+                        or '>B' in bu_combinators
+                        or '<B1' in bu_combinators
+                        or '<B2' in bu_combinators
+                        or '<B3' in bu_combinators
+                        or '<B4' in bu_combinators
+                        or '>Bx1' in bu_combinators
+                        or '>Bx2' in bu_combinators
+                        or '>Bx3' in bu_combinators
+                        or '>B2' in bu_combinators
+                        or 'SSEQ' in bu_combinators):
+                        reveal_count[pointer+1] = 1
+            for pointer, td_combinators in enumerate(td_combinator_list):
+                if 'ADNint' in td_combinators:
+                    if can_combine(bu_category_list[pointer-1][-1], bu_category_list[pointer][-1]):
+                        reveal_count[pointer] = 1
+
+            reveal_counts.append(reveal_count)
+
+        reveal_counts = np.array(reveal_counts)
+        df = pd.DataFrame(np.stack([reveal_counts],1), columns=["reveal count"])
         df.to_csv(OUTPUT_PATH, index=False)
-
 
 
 # Open Node Count of bottom-up traversal, following Nelson et al. (2017)?
