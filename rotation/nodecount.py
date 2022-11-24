@@ -279,9 +279,11 @@ class RevealCombinatorCount(object):
                 while counter != adn_count:
                     for combinators in bu_combinator_list:
                         if 'ADNint' in combinators:
-                            if combinators.count('ADNint') <= adn_count-counter:
-                                combinators = [combinator for combinator in combinators if combinator != 'ADNint']
-                                counter = adn_count
+                            c_count = combinators.count('ADNint')
+                            if c_count <= adn_count-counter:
+                                for i in range(c_count):
+                                    combinators.remove('ADNint')
+                                counter += c_count
                             else:
                                 while adn_count-counter != 0:
                                     combinators.remove('ADNint')
@@ -306,11 +308,13 @@ class RevealCombinatorCount(object):
                 if 'ADNint' in td_combinators:
                     if can_combine(bu_category_list[pointer-1][-1], bu_category_list[pointer][-1]):
                         reveal_count[pointer] += 1
-
             reveal_counts.append(reveal_count)
-
-        reveal_counts = np.array(reveal_counts)
-        df = pd.DataFrame(np.stack([reveal_counts],1), columns=["reveal count"])
+        
+        output_list = []
+        for count in reveal_counts:
+            output_list += count
+        output_list = np.array(output_list, dtype=np.int64)
+        df = pd.DataFrame(np.stack([output_list],1), columns=["reveal count"])
         df.to_csv(OUTPUT_PATH, index=False)
 
 
