@@ -101,7 +101,7 @@ if __name__ == '__main__':
                         help='path to JapaneseCCGBank data file')
     parser.add_argument('--output',
                         help="Choose 'uni' or 'right' or 'reveal. If 'right' is choosen, the combinators of right-branching tree are outputted. If 'reveal' is choosen, the combinators of the tree in which a reveal operation counld be impremented are outputted. Else, all of the combinators are outputted",
-                        choices=['uni', 'right', 'reveal'],
+                        choices=['uni', 'uni_file', 'right', 'reveal'],
                         default='uni')
     args = parser.parse_args()
 
@@ -185,7 +185,7 @@ if __name__ == '__main__':
                     f.write(deriv_of(i))
                     f.write('\n')
 
-    else:
+    elif args.output == 'uni_file':
         combinatorlist_creator = CombinatorListCreator(args.PATH)
 
         pathlist = combinatorlist_creator.path_list
@@ -199,3 +199,17 @@ if __name__ == '__main__':
             logger.info(f'writing to {f.name}')
             for key, value in tqdm(combinatorlist_creator.combinator_dict.items()):
                 print(f'{key} # {str(value)}', file=f)
+
+    else:
+        combinatorlist_creator = CombinatorListCreator(args.PATH)
+
+        pathlist = combinatorlist_creator.path_list
+        trees = [tree for _, _, tree in read_parsedtree(pathlist[0])]
+        for tree in tqdm(trees):
+            combinatorlist_creator._traverse(tree)
+
+        OUTPUT_PATH = Path(args.PATH[0]).parent / 'combinators.txt'
+        with open(OUTPUT_PATH, 'w') as f:
+            logger.info(f'writing to {f.name}')
+            for key, value in tqdm(combinatorlist_creator.combinator_dict.items()):
+                print(f'{key} : {str(value)}', file=f)
