@@ -289,32 +289,43 @@ class RevealCombinatorCount(object):
                                     combinators.remove('ADNint')
                                     counter += 1
 
-            for pointer, bu_combinators in enumerate(bu_combinator_list[:-1]):
-                if 'ADNint' in bu_combinators:
-                    if ('>' in bu_combinators
-                        or '<' in bu_combinators
-                        or '>B' in bu_combinators
-                        or '<B1' in bu_combinators
-                        or '<B2' in bu_combinators
-                        or '<B3' in bu_combinators
-                        or '<B4' in bu_combinators
-                        or '>Bx1' in bu_combinators
-                        or '>Bx2' in bu_combinators
-                        or '>Bx3' in bu_combinators
-                        or '>B2' in bu_combinators
-                        or 'SSEQ' in bu_combinators):
-                        reveal_count[pointer+1] += 1
-            for pointer, td_combinators in enumerate(td_combinator_list):
-                if 'ADNint' in td_combinators:
+            for pointer, bu_combinators in enumerate(bu_combinator_list[2:], 2):
+                if len(bu_combinators) == 0:
                     if can_combine(bu_category_list[pointer-1][-1], bu_category_list[pointer][-1]):
                         reveal_count[pointer] += 1
+                elif len(bu_combinators) == 1:
+                    if bu_combinators.count('>T') == 1:
+                        if can_combine(bu_category_list[pointer-1][-1], bu_category_list[pointer][-1]):
+                            reveal_count[pointer] += 1
+                else:
+                    reveal_count[pointer] += 1
+
+                # if 'ADNint' in bu_combinators:
+                #     if ('>' in bu_combinators
+                #         or '<' in bu_combinators
+                #         or '>B' in bu_combinators
+                #         or '<B1' in bu_combinators
+                #         or '<B2' in bu_combinators
+                #         or '<B3' in bu_combinators
+                #         or '<B4' in bu_combinators
+                #         or '>Bx1' in bu_combinators
+                #         or '>Bx2' in bu_combinators
+                #         or '>Bx3' in bu_combinators
+                #         or '>B2' in bu_combinators
+                #         or 'SSEQ' in bu_combinators):
+                #         reveal_count[pointer+1] += 1
+            # for pointer, td_combinators in enumerate(td_combinator_list):
+            #     if 'ADNint' in td_combinators:
+            #         if can_combine(bu_category_list[pointer-1][-1], bu_category_list[pointer][-1]):
+            #             reveal_count[pointer] += 1
+
             reveal_counts.append(reveal_count)
-        
+
         output_list = []
         for count in reveal_counts:
             output_list += count
         output_list = np.array(output_list, dtype=np.int64)
-        df = pd.DataFrame(np.stack([output_list],1), columns=["reveal count"])
+        df = pd.DataFrame(np.stack([output_list],1), columns=["reveal"])
         df.to_csv(OUTPUT_PATH, index=False)
 
 
