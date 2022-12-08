@@ -112,6 +112,9 @@ class CombinatorCount(object):
         output_list = output_list[1:]
 
         binary_count = []
+        forward_count = []
+        backward_count = []
+        typeraise_count = []
         # logger.info('remove <lex>')
         logger.info('count binary combinators')
         for i in tqdm(output_list):
@@ -127,12 +130,83 @@ class CombinatorCount(object):
                                 + i.count('>Bx3')
                                 + i.count('>B2')
                                 + i.count('SSEQ')))
+            forward_count.append(i.count('>')
+                                + i.count('>B')
+                                + i.count('>Bx1')
+                                + i.count('>Bx2')
+                                + i.count('>Bx3')
+                                + i.count('>B2'))
+            backward_count.append(i.count('<')
+                                + i.count('<B1')
+                                + i.count('<B2')
+                                + i.count('<B3')
+                                + i.count('<B4'))
+            typeraise_count.append(i.count('>T'))
             # i.remove('<lex>')
         # output_list = np.array(output_list)
         binary_count = np.array(binary_count)
-        df = pd.DataFrame(np.stack([binary_count],1), columns=['binary combinators'])
+        forward_count = np.array(forward_count)
+        backward_count = np.array(backward_count)
+        typeraise_count = np.array(typeraise_count)
+        df = pd.DataFrame(np.stack([binary_count,forward_count, backward_count, typeraise_count],1), columns=['binary combinators', 'forward', 'backward', 'typeraise'])
         logger.info(f'writing to {OUTPUT_PATH}')
         df.to_csv(OUTPUT_PATH, index=False)
+
+    @staticmethod
+    def make_data_frame(trees: List[Tree]) -> None:
+        self = CombinatorCount()
+        logger.info('traverse trees')
+        for tree in tqdm(trees):
+            self.traverse(tree)
+
+        stack = ['<lex>']
+        output_list = []
+        logger.info('make combinators correspond to each terminal')
+        for i in tqdm(self.combinator_list):
+            if i == '<lex>':
+                output_list.append(stack)
+                stack = ['<lex>']
+            else:
+                stack.append(i)
+        output_list.append(stack)
+        output_list = output_list[1:]
+
+        binary_count = []
+        forward_count = []
+        backward_count = []
+        typeraise_count = []
+        logger.info('count binary combinators')
+        for i in tqdm(output_list):
+            binary_count.append(i.count('>')
+                                + i.count('<')
+                                + i.count('>B')
+                                + i.count('<B1')
+                                + i.count('<B2')
+                                + i.count('<B3')
+                                + i.count('<B4')
+                                + i.count('>Bx1')
+                                + i.count('>Bx2')
+                                + i.count('>Bx3')
+                                + i.count('>B2')
+                                + i.count('SSEQ'))
+            forward_count.append(i.count('>')
+                                + i.count('>B')
+                                + i.count('>Bx1')
+                                + i.count('>Bx2')
+                                + i.count('>Bx3')
+                                + i.count('>B2'))
+            backward_count.append(i.count('<')
+                                + i.count('<B1')
+                                + i.count('<B2')
+                                + i.count('<B3')
+                                + i.count('<B4'))
+            typeraise_count.append(i.count('>T'))
+        binary_count = np.array(binary_count)
+        forward_count = np.array(forward_count)
+        backward_count = np.array(backward_count)
+        typeraise_count = np.array(typeraise_count)
+        df = pd.DataFrame(np.stack([binary_count,forward_count, backward_count, typeraise_count],1), columns=['binary combinators', 'forward', 'backward', 'typeraise'])
+        return df
 
 # In contrast to Stanojevic et al. (2021; 2022), the operation, Rotate-to-right, will happen only when it is necessary.
 # That is, when the unary rules, ADNint or ADNext, is applied, as follows;
