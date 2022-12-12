@@ -153,7 +153,7 @@ class CombinatorCount(object):
         df.to_csv(OUTPUT_PATH, index=False)
 
     @staticmethod
-    def make_data_frame(trees: List[Tree]) -> None:
+    def make_data_frame(trees: List[Tree]):
         self = CombinatorCount()
         logger.info('traverse trees')
         for tree in tqdm(trees):
@@ -208,9 +208,10 @@ class CombinatorCount(object):
         df = pd.DataFrame(np.stack([binary_count,forward_count, backward_count, typeraise_count],1), columns=['binary combinators', 'forward', 'backward', 'typeraise'])
         return df
 
-# In contrast to Stanojevic et al. (2021; 2022), the operation, Rotate-to-right, will happen only when it is necessary.
+# In contrast to Stanojevic et al. (2021; 2022), the operation, Rotate-to-right, will happen when it is necessary.
 # That is, when the unary rules, ADNint or ADNext, is applied, as follows;
-#      0          1            1       2 + rotate(=1)
+# canonical: (0, 0, 1, 2)
+#      0          1            1       1 + rotate(=1)
 #  Hanako-ga    Taro-o      nagutta     otoko-o
 #  ---------  ----------   ---------   ---------
 #     NP^         NP^      (S\NP)\NP       NP
@@ -223,19 +224,17 @@ class CombinatorCount(object):
 #   S/(S\NP)           S\NP
 #             -------------------[ADN]
 #                     NP/NP
-#             ---------------------------------->
-#                            NP^
-#  --------------------------------------------->B
+#  ---------------------------------------------attach
 #                 S/((S\NP)\NP)
 #
 # I focus on the fact that top-down traversal can detect the left-spine of a constituent,
 # and bottom-up traversal can detect the right-spine of a constituent.
 #
-# Now, I call the constituent including 'ADNint' an 'ADN constituent'.
+# Now, I call the constituent including 'ADN' an 'ADN constituent'.
 # The terminal node of the left-spine of an ADN constituent is added 1 to, when
 #   (1) the terminal node is not the beggining of a sentence, and
 #   (2) the terminal node can combine with the category already constructed in bottom-up traversal
-# On the other hand, the terminal node located in the right of the right-spine of an ADN constituent is added [rotation count] to, when
+# On the other hand, the terminal node located in the right of the right-spine of an ADN constituent is subtracted 1 from, when
 #   (1) there is at least one binary composition under ADN, and
 #   (2) the ADN constituent is not the end of a sentence.
 
@@ -306,7 +305,7 @@ class RevealCombinatorCount(object):
             self.td_combinator_list.append(node.op_symbol)
 
     @staticmethod
-    def make_csv(trees: List[Tree], OUTPUT_PATH: str) -> None:
+    def make_data_frame(trees: List[Tree]):
         reveal_counts = []
         for tree in tqdm(trees):
             self = RevealCombinatorCount()
@@ -346,6 +345,7 @@ class RevealCombinatorCount(object):
             td_combinator_list.append(stack)
             td_combinator_list.pop()
 
+            # remove some 'ADNint's from bu_combinator_list
             reveal_count = [0]*len(bu_combinator_list)
             if 'ADNint' in td_combinator_list[0]:
                 adn_count = td_combinator_list[0].count('ADNint')
@@ -364,15 +364,27 @@ class RevealCombinatorCount(object):
                                     counter += 1
 
             for pointer, bu_combinators in enumerate(bu_combinator_list[2:], 2):
-                if len(bu_combinators) == 0:
-                    if can_combine(bu_category_list[pointer-1][-1], bu_category_list[pointer][-1]):
-                        reveal_count[pointer] += 1
-                elif len(bu_combinators) == 1:
-                    if bu_combinators.count('>T') == 1:
+                if 'ADNint' in td_combinator_list[pointer]:  # The left-edge of an ADN constituent is added 1 to.
+                    if len(bu_combinators) == 0:
                         if can_combine(bu_category_list[pointer-1][-1], bu_category_list[pointer][-1]):
                             reveal_count[pointer] += 1
-                else:
-                    reveal_count[pointer] += 1
+                            subtracted = 0
+                            for index, elements in enumerate(bu_combinator_list[pointer:], pointer):
+                                if subtracted == 0:
+                                    if 'ADNint' in elements:
+                                        reveal_count[index] -= 1
+                                        subtracted += 1
+                    elif len(bu_combinators) == 1:
+                        if bu_combinators.count('>T') == 1:
+                            if can_combine(bu_category_list[pointer-1][-1], bu_category_list[pointer][-1]):
+                                reveal_count[pointer] += 1
+                                subtracted = 0
+                                for index, elements in enumerate(bu_combinator_list[pointer:], pointer):
+                                    if subtracted == 0:
+                                        if 'ADNint' in elements:
+                                            reveal_count[index] -= 1
+                                            subtracted += 1
+
 
                 # if 'ADNint' in bu_combinators:
                 #     if ('>' in bu_combinators
@@ -400,8 +412,7 @@ class RevealCombinatorCount(object):
             output_list += count
         output_list = np.array(output_list, dtype=np.int64)
         df = pd.DataFrame(np.stack([output_list],1), columns=["reveal"])
-        df.to_csv(OUTPUT_PATH, index=False)
-
+        return df
 
 # Open Node Count of bottom-up traversal, following Nelson et al. (2017)?
 
@@ -414,8 +425,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     parent = str(Path(args.FILE).parent)
     file = str(Path(args.FILE).stem)
-    # OUTPUT_PATH = parent + '/' + file + '_combinators.csv'
-    OUTPUT_PATH = parent + '/' + file + '_reveal.csv'
+    OUTPUT_PATH = parent + '/' + file + '_combinators.csv'
     trees = [tree for _, _, tree in read_parsedtree(args.FILE)]
-    # CombinatorCount.make_csv(trees, OUTPUT_PATH)
-    RevealCombinatorCount.make_csv(trees, OUTPUT_PATH)
+    CombinatorCount.make_csv(trees, OUTPUT_PATH)
