@@ -307,6 +307,7 @@ class RevealCombinatorCount(object):
     @staticmethod
     def make_data_frame(trees: List[Tree]):
         reveal_counts = []
+        rotation_counts = []
         for tree in tqdm(trees):
             self = RevealCombinatorCount()
             self.bottomup_traverse(tree)
@@ -347,6 +348,7 @@ class RevealCombinatorCount(object):
 
             # remove some 'ADNint's from bu_combinator_list
             reveal_count = [0]*len(bu_combinator_list)
+            rotation_count = [0]*len(bu_combinator_list)
             if 'ADNint' in td_combinator_list[0]:
                 adn_count = td_combinator_list[0].count('ADNint')
                 counter = 0
@@ -373,6 +375,7 @@ class RevealCombinatorCount(object):
                                 if subtracted == 0:
                                     if 'ADNint' in elements:
                                         reveal_count[index] -= 1
+                                        rotation_count[index] += 1
                                         subtracted += 1
                     elif len(bu_combinators) == 1:
                         if bu_combinators.count('>T') == 1:
@@ -383,6 +386,7 @@ class RevealCombinatorCount(object):
                                     if subtracted == 0:
                                         if 'ADNint' in elements:
                                             reveal_count[index] -= 1
+                                            rotation_count[index] += 1
                                             subtracted += 1
 
 
@@ -406,12 +410,17 @@ class RevealCombinatorCount(object):
             #             reveal_count[pointer] += 1
 
             reveal_counts.append(reveal_count)
+            rotation_counts.append(rotation_count)
 
-        output_list = []
+        reveal_list = []
+        rotation_list = []
         for count in reveal_counts:
-            output_list += count
-        output_list = np.array(output_list, dtype=np.int64)
-        df = pd.DataFrame(np.stack([output_list],1), columns=["reveal"])
+            reveal_list += count
+        for count in rotation_counts:
+            rotation_list += count
+        reveal_list = np.array(reveal_list, dtype=np.int64)
+        rotation_list = np.array(rotation_list, dtype=np.int64)
+        df = pd.DataFrame(np.stack([reveal_list, rotation_list],1), columns=["reveal", "rotation"])
         return df
 
 # Open Node Count of bottom-up traversal, following Nelson et al. (2017)?
