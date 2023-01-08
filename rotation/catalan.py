@@ -12,16 +12,17 @@ for example,
 """
 
 
-import math
 import argparse
-from typing import List
+import math
 
-def catalan(ns: List[int]) -> List[int]:
-    return [int(math.comb(2*(n-1), (n-1))/n) for n in ns]
 
-if __name__ == '__main__':
+def catalan(ns: list[int]) -> list[int]:
+    return [int(math.comb(2 * (n - 1), (n - 1)) / n) for n in ns]
+
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('INPUT', nargs="*", type=int, help='a list of integers')
+    parser.add_argument("INPUT", nargs="*", type=int, help="a list of integers")
     args = parser.parse_args()
 
     print(catalan(args.INPUT))

@@ -1,30 +1,60 @@
-import logging
 import argparse
-from pathlib import Path
-from typing import List
+import logging
 from collections import defaultdict
-from tqdm import tqdm
+from pathlib import Path
 
-from depccg.tools.ja.reader import read_ccgbank
+from parsed_reader import read_parsedstring, read_parsedtree
+from tqdm import tqdm
+from tree_rotation import unification
+
 from depccg.printer.deriv import deriv_of
+from depccg.tools.ja.reader import read_ccgbank
 from depccg.tree import Tree
 
-from parsed_reader import read_parsedtree, read_parsedstring
-from tree_rotation import unification
-# from tools import tokens
+COMBINATORS: list[str] = [
+    ">",
+    "<",
+    ">B",
+    ">B2",
+    "<B1",
+    "<B2",
+    "<B3",
+    "<B4",
+    ">Bx1",
+    ">Bx2",
+    ">Bx3",
+]
 
-logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
-                    level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s", level=logging.INFO
+)
 logger = logging.getLogger(__name__)
 
 
+def delete_unary(self) -> None:
+    if not self.is_leaf:
+        if len(self.children) == 1:
+            if not self.children[0].is_leaf:
+                self.children, self.cat, self.op_symbol = (
+                    self.children[0].children,
+                    self.children[0].cat,
+                    self.children[0].op_symbol,
+                )
+        for child in self.children:
+            if isinstance(child, Tree):
+                child.delete_unary()
+
+
+Tree.delete_unary = delete_unary
+
+
 class CombinatorListCreator(object):
-    def __init__(self, path_list: List[str]):
+    def __init__(self, path_list: list[str]):
         self.path_list = path_list
         self.combinator_dict = defaultdict(int)
 
     def _traverse(self, tree: Tree):
-        if tree.is_leaf == False:
+        if not tree.is_leaf:
             children = tree.children
             if len(children) == 1:
                 self._traverse(children[0])
@@ -36,76 +66,88 @@ class CombinatorListCreator(object):
 
 
 class RightBranchFinder(object):
-    def __init__(self, path_list: List[str]):
+    def __init__(self, path_list: list[str]):
         self.path_list = path_list
         self.combinatorPairList = []
 
     def _traverse(self, tree: Tree):
-        if tree.is_leaf == False:
+        if not tree.is_leaf:
             children = tree.children
             if len(children) == 1:
                 self._traverse(children[0])
             else:
                 self._traverse(children[0])
                 self._traverse(children[1])
-                if children[1].is_unary == False:
-                    self.combinatorPairList.append([tree.op_symbol,
-                                                    children[1].op_symbol,
-                                                    str(tree.cat),
-                                                    str(children[0].cat),
-                                                    str(children[1].cat),
-                                                    str(children[1].left_child.cat),
-                                                    str(children[1].right_child.cat)])
+                if children[1].is_unary is False:
+                    self.combinatorPairList.append(
+                        [
+                            tree.op_symbol,
+                            children[1].op_symbol,
+                            str(tree.cat),
+                            str(children[0].cat),
+                            str(children[1].cat),
+                            str(children[1].left_child.cat),
+                            str(children[1].right_child.cat),
+                        ]
+                    )
 
 
 class RevealFinder(object):
-    def __init__(self, path_list: List[str]):
+    def __init__(self, path_list: list[str]):
         self.path_list = path_list
-        self.revealList= []
+        self.revealList = []
 
     def _traverse(self, tree: Tree):
-        if tree.is_leaf == False:
+        if not tree.is_leaf:
             if len(tree.children) == 1:
                 self._traverse(tree.child)
             else:
                 self._traverse(tree.left_child)
                 self._traverse(tree.right_child)
-                if tree.right_child.is_leaf == False:
+                if tree.right_child.is_leaf is False:
                     if len(tree.right_child.children) == 1:
-                       self._traverse(tree.right_child.child)
+                        self._traverse(tree.right_child.child)
                     else:
                         self._traverse(tree.right_child.left_child)
                         self._traverse(tree.right_child.right_child)
-                        if tree.right_child.left_child.is_leaf == False:
+                        if tree.right_child.left_child.is_leaf is False:
                             if len(tree.right_child.left_child.children) == 1:
                                 self._traverse(tree.right_child.left_child.child)
                             else:
                                 self._traverse(tree.right_child.left_child.left_child)
                                 self._traverse(tree.right_child.left_child.right_child)
-                                self.revealList.append([tree.op_symbol,
-                                                        tree.right_child.op_symbol,
-                                                        tree.right_child.left_child.op_symbol,
-                                                        str(tree.cat),
-                                                        str(tree.left_child.cat),
-                                                        str(tree.right_child.cat),
-                                                        str(tree.right_child.left_child.cat),
-                                                        str(tree.right_child.right_child.cat),
-                                                        str(tree.right_child.left_child.left_child.cat),
-                                                        str(tree.right_child.left_child.right_child.cat)])
+                                self.revealList.append(
+                                    [
+                                        tree.op_symbol,
+                                        tree.right_child.op_symbol,
+                                        tree.right_child.left_child.op_symbol,
+                                        str(tree.cat),
+                                        str(tree.left_child.cat),
+                                        str(tree.right_child.cat),
+                                        str(tree.right_child.left_child.cat),
+                                        str(tree.right_child.right_child.cat),
+                                        str(tree.right_child.left_child.left_child.cat),
+                                        str(
+                                            tree.right_child.left_child.right_child.cat
+                                        ),
+                                    ]
+                                )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('PATH',
-                        nargs="*",
-                        type=Path,
-                        help='path to JapaneseCCGBank data file')
-    parser.add_argument('--output',
-                        help="Choose 'uni' or 'right' or 'reveal. If 'right' is choosen, the combinators of right-branching tree are outputted. If 'reveal' is choosen, the combinators of the tree in which a reveal operation counld be impremented are outputted. Else, all of the combinators are outputted",
-                        choices=['uni', 'uni_file', 'right', 'reveal'],
-                        default='uni')
+    parser.add_argument(
+        "PATH", nargs="*", type=Path, help="path to JapaneseCCGBank data file"
+    )
+    parser.add_argument(
+        "--output",
+        help="Choose 'uni' or 'right' or 'reveal. If 'right' is choosen, the combinators of right-branching tree are outputted. If 'reveal' is choosen, the combinators of the tree in which a reveal operation counld be impremented are outputted. Else, all of the combinators are outputted",
+        choices=["uni", "uni_file", "right", "reveal"],
+        default="uni",
+    )
     args = parser.parse_args()
 
-    if args.output == 'right':
+    if args.output == "right":
         rightbranch_finder = RightBranchFinder(args.PATH)
         seen = []
         pathlist = rightbranch_finder.path_list
@@ -118,11 +160,11 @@ if __name__ == '__main__':
                     seen.append(i)
 
         stack = []
-        OUTPUT_PATH = Path(args.PATH[0]).parent / 'rightbranch.txt'
-        with open(OUTPUT_PATH, 'w') as f:
-            logger.info(f'writing to {f.name}')
+        OUTPUT_PATH = Path(args.PATH[0]).parent / "rightbranch.txt"
+        with open(OUTPUT_PATH, "w") as f:
+            logger.info(f"writing to {f.name}")
             for i in tqdm(sorted(seen)):
-                print(f'op_symbol: {i[0]}, {i[1]}', file=f)
+                print(f"op_symbol: {i[0]}, {i[1]}", file=f)
                 #
                 #             op_symbol: i[0], cat: i[2]
                 #                  /              \
@@ -132,16 +174,31 @@ if __name__ == '__main__':
                 #                               /         \
                 #                         cat: i[5]     cat: i[6]
                 #
-                stack.append('{' + i[0] + ' ' + i[2] + ' {' + i[3] + ' 1/1/_/_} {' + i[1] + ' ' + i[4] + ' {' + i[5] + ' 2/2/_/_} {' + i[6]+ ' 3/3/_/_}}}')
-            f.write('\n')
-            for i,j in enumerate(read_parsedstring(stack)):
+                stack.append(
+                    "{"
+                    + i[0]
+                    + " "
+                    + i[2]
+                    + " {"
+                    + i[3]
+                    + " 1/1/_/_} {"
+                    + i[1]
+                    + " "
+                    + i[4]
+                    + " {"
+                    + i[5]
+                    + " 2/2/_/_} {"
+                    + i[6]
+                    + " 3/3/_/_}}}"
+                )
+            f.write("\n")
+            for i, j in enumerate(read_parsedstring(stack)):
                 f.write(str(i))
-                f.write('\n')
+                f.write("\n")
                 f.write(deriv_of(j))
-                f.write('\n')
+                f.write("\n")
 
-
-    elif args.output == 'reveal':
+    elif args.output == "reveal":
         reveal_finder = RevealFinder(args.PATH)
 
         seen = []
@@ -149,17 +206,18 @@ if __name__ == '__main__':
         for path in tqdm(pathlist):
             trees = [tree for _, _, tree in read_parsedtree(path)]
             for tree in tqdm(trees):
+                tree.delete_unary()
                 reveal_finder._traverse(tree)
             for i in tqdm(reveal_finder.revealList):
                 if i not in seen:
                     seen.append(i)
 
         stack = []
-        OUTPUT_PATH = Path(args.PATH[0]).parent / 'reveal.txt'
-        with open(OUTPUT_PATH, 'w') as f:
-            logger.info(f'writing to {f.name}')
+        OUTPUT_PATH = Path(args.PATH[0]).parent / "reveal.txt"
+        with open(OUTPUT_PATH, "w") as f:
+            logger.info(f"writing to {f.name}")
             for i in tqdm(sorted(seen)):
-                print(f'op_symbol: {i[0]}, {i[1]}, {i[2]}', file=f)
+                print(f"op_symbol: {i[0]}, {i[1]}, {i[2]}", file=f)
                 #
                 #                sym: i[0], cat: i[3]
                 #                   /            \
@@ -176,29 +234,79 @@ if __name__ == '__main__':
                 #            cat: i[8]          cat: i[9]
                 #
                 # {i[0] i[3] {i[4] 1/1/_/_} {i[1] i[5] {i[2] i[6] {i[8] 2/2/_/_} {i[9] 3/3/_/_}} {i[7] 4/4/_/_}}}
-                stack.append('{' + i[0] + ' ' + i[3] + ' {' + i[4] + ' 1/1/_/_} {' + i[1] + ' ' +  i[5] + ' {' + i[2] + ' ' + i[6] + ' {' + i[8] + ' 2/2/_/_} {' + i[9] + ' 3/3/_/_}} {' + i[7] + ' 4/4/_/_}}}')
-            f.write('\n')
+                stack.append(
+                    "{"
+                    + i[0]
+                    + " "
+                    + i[3]
+                    + " {"
+                    + i[4]
+                    + " 1/1/_/_} {"
+                    + i[1]
+                    + " "
+                    + i[5]
+                    + " {"
+                    + i[2]
+                    + " "
+                    + i[6]
+                    + " {"
+                    + i[8]
+                    + " 2/2/_/_} {"
+                    + i[9]
+                    + " 3/3/_/_}} {"
+                    + i[7]
+                    + " 4/4/_/_}}}"
+                )
+            f.write("\n")
             for i in tqdm(read_parsedstring(stack)):
-                if (unification(i.op_symbol,i.left_child.cat, i.right_child.cat) != None
-                    and unification(i.right_child.op_symbol,i.right_child.left_child.cat, i.right_child.left_child.cat) != None
-                    and unification(i.right_child.left_child.op_symbol,i.right_child.left_child.left_child.cat, i.right_child.left_child.right_child.cat) != None):
+                bool_set = set()
+                for combinator in COMBINATORS:
+                    bool_set.add(
+                        unification(
+                            combinator,
+                            i.left_child.cat,
+                            i.right_child.left_child.left_child.cat,
+                        )
+                    )
+                if len(bool_set) >= 2 or (
+                    len(bool_set) == 1 and not (None in bool_set)
+                ):
+                    # if (
+                    #     unification(i.op_symbol, i.left_child.cat, i.right_child.cat)
+                    #     is not None
+                    #     and unification(
+                    #         i.right_child.op_symbol,
+                    #         i.right_child.left_child.cat,
+                    #         i.right_child.left_child.cat,
+                    #     )
+                    #     is not None
+                    #     and unification(
+                    #         i.right_child.left_child.op_symbol,
+                    #         i.right_child.left_child.left_child.cat,
+                    #         i.right_child.left_child.right_child.cat,
+                    #     )
+                    #     is not None
+                    # ):
                     f.write(deriv_of(i))
-                    f.write('\n')
+                    # f.write(i.word)
+                    f.write("\n")
 
-    elif args.output == 'uni_file':
+    elif args.output == "uni_file":
         combinatorlist_creator = CombinatorListCreator(args.PATH)
 
         pathlist = combinatorlist_creator.path_list
         for path in tqdm(pathlist):
-            trees = [tree for _, _, tree in read_ccgbank(path)]  # If input format is not Japanese CCGBank, change this function to 'read_parsedtree()'.
+            trees = [
+                tree for _, _, tree in read_ccgbank(path)
+            ]  # If input format is not Japanese CCGBank, change this function to 'read_parsedtree()'.
             for tree in tqdm(trees):
                 combinatorlist_creator._traverse(tree)
 
-        OUTPUT_PATH = Path(args.PATH[0]).parent / 'combinators.txt'
-        with open(OUTPUT_PATH, 'w') as f:
-            logger.info(f'writing to {f.name}')
+        OUTPUT_PATH = Path(args.PATH[0]).parent / "combinators.txt"
+        with open(OUTPUT_PATH, "w") as f:
+            logger.info(f"writing to {f.name}")
             for key, value in tqdm(combinatorlist_creator.combinator_dict.items()):
-                print(f'{key} # {str(value)}', file=f)
+                print(f"{key} # {str(value)}", file=f)
 
     else:
         combinatorlist_creator = CombinatorListCreator(args.PATH)
@@ -208,8 +316,8 @@ if __name__ == '__main__':
         for tree in tqdm(trees):
             combinatorlist_creator._traverse(tree)
 
-        OUTPUT_PATH = Path(args.PATH[0]).parent / 'combinators.txt'
-        with open(OUTPUT_PATH, 'w') as f:
-            logger.info(f'writing to {f.name}')
+        OUTPUT_PATH = Path(args.PATH[0]).parent / "combinators.txt"
+        with open(OUTPUT_PATH, "w") as f:
+            logger.info(f"writing to {f.name}")
             for key, value in tqdm(combinatorlist_creator.combinator_dict.items()):
-                print(f'{key} : {str(value)}', file=f)
+                print(f"{key} : {str(value)}", file=f)

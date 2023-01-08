@@ -2,7 +2,6 @@ import re
 import logging
 import argparse
 from pathlib import Path
-from typing import List
 from tqdm import tqdm
 
 import numpy as np
@@ -11,8 +10,9 @@ from depccg.cat import Category
 from depccg.tree import Tree, Token
 from parsed_reader import read_parsedtree
 
-logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
-                    level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s", level=logging.INFO
+)
 logger = logging.getLogger(__name__)
 
 
@@ -35,7 +35,8 @@ class NodeCount(object):
             self.counts.append(self.count)
             self.count += 1
 
-def nodecount(filepath: str, trees: List[Tree]):
+
+def nodecount(filepath: str, trees: list[Tree]):
     """Count the number of nodes by bottom-up traversal
 
     Args:
@@ -44,19 +45,20 @@ def nodecount(filepath: str, trees: List[Tree]):
     Results:
         output csv file
     """
-    tokens: List[Token] = []
-    counts: List[int] = []
+    tokens: list[Token] = []
+    counts: list[int] = []
     for tree in trees:
         nd = NodeCount()
         nd.traverse(tree)
         nd.counts.append(nd.count)
-        tokens += [token['word'] for token in tree.tokens]
-        counts += [j-i for i,j in zip(nd.counts, nd.counts[1:])]
+        tokens += [token["word"] for token in tree.tokens]
+        counts += [j - i for i, j in zip(nd.counts, nd.counts[1:])]
 
     arr_tokens = np.array(tokens, dtype=object)
     arr_counts = np.array(counts, dtype=object)
     results = np.stack([arr_tokens, arr_counts])
-    np.savetxt(filepath, results.T, fmt="%s", delimiter=',', newline='\n')
+    np.savetxt(filepath, results.T, fmt="%s", delimiter=",", newline="\n")
+
 
 # top-down traversal
 # class TopDonwCombinatorCount(object):
@@ -79,6 +81,7 @@ def nodecount(filepath: str, trees: List[Tree]):
 class CombinatorCount(object):
     def __init__(self):
         self.combinator_list = []
+
     def traverse(self, node: Tree) -> None:
         if node.is_leaf == False:
             children = node.children
@@ -93,19 +96,19 @@ class CombinatorCount(object):
             self.combinator_list.append(node.op_symbol)
 
     @staticmethod
-    def make_csv(trees: List[Tree], OUTPUT_PATH: str) -> None:
+    def make_csv(trees: list[Tree], OUTPUT_PATH: str) -> None:
         self = CombinatorCount()
-        logger.info('traverse trees')
+        logger.info("traverse trees")
         for tree in tqdm(trees):
             self.traverse(tree)
 
-        stack = ['<lex>']
+        stack = ["<lex>"]
         output_list = []
-        logger.info('make combinators correspond to each terminal')
+        logger.info("make combinators correspond to each terminal")
         for i in tqdm(self.combinator_list):
-            if i == '<lex>':
+            if i == "<lex>":
                 output_list.append(stack)
-                stack = ['<lex>']
+                stack = ["<lex>"]
             else:
                 stack.append(i)
         output_list.append(stack)
@@ -115,57 +118,80 @@ class CombinatorCount(object):
         forward_count = []
         backward_count = []
         typeraise_count = []
+        application_count = []
+        composition_count = []
         # logger.info('remove <lex>')
-        logger.info('count binary combinators')
+        logger.info("count binary combinators")
         for i in tqdm(output_list):
-            binary_count.append(str(i.count('>')
-                                + i.count('<')
-                                + i.count('>B')
-                                + i.count('<B1')
-                                + i.count('<B2')
-                                + i.count('<B3')
-                                + i.count('<B4')
-                                + i.count('>Bx1')
-                                + i.count('>Bx2')
-                                + i.count('>Bx3')
-                                + i.count('>B2')
-                                + i.count('SSEQ')))
-            forward_count.append(i.count('>')
-                                + i.count('>B')
-                                + i.count('>Bx1')
-                                + i.count('>Bx2')
-                                + i.count('>Bx3')
-                                + i.count('>B2'))
-            backward_count.append(i.count('<')
-                                + i.count('<B1')
-                                + i.count('<B2')
-                                + i.count('<B3')
-                                + i.count('<B4'))
-            typeraise_count.append(i.count('>T'))
+            binary_count.append(
+                i.count(">")
+                + i.count("<")
+                + i.count(">B")
+                + i.count("<B1")
+                + i.count("<B2")
+                + i.count("<B3")
+                + i.count("<B4")
+                + i.count(">Bx1")
+                + i.count(">Bx2")
+                + i.count(">Bx3")
+                + i.count(">B2")
+                + i.count("SSEQ")
+            )
+            forward_count.append(
+                i.count(">")
+                + i.count(">B")
+                + i.count(">Bx1")
+                + i.count(">Bx2")
+                + i.count(">Bx3")
+                + i.count(">B2")
+            )
+            backward_count.append(
+                i.count("<")
+                + i.count("<B1")
+                + i.count("<B2")
+                + i.count("<B3")
+                + i.count("<B4")
+            )
+            typeraise_count.append(i.count(">T"))
+            application_count.appebd(i.count(">") + i.count("<"))
+            composition_count.append(
+                i.count(">B")
+                + i.count("<B1")
+                + i.count("<B2")
+                + i.count("<B3")
+                + i.count("<B4")
+                + i.count(">Bx1")
+                + i.count(">Bx2")
+                + i.count(">Bx3")
+                + i.count(">B2")
+            )
             # i.remove('<lex>')
         # output_list = np.array(output_list)
         binary_count = np.array(binary_count)
         forward_count = np.array(forward_count)
         backward_count = np.array(backward_count)
         typeraise_count = np.array(typeraise_count)
-        df = pd.DataFrame(np.stack([binary_count,forward_count, backward_count, typeraise_count],1), columns=['binary combinators', 'forward', 'backward', 'typeraise'])
-        logger.info(f'writing to {OUTPUT_PATH}')
+        df = pd.DataFrame(
+            np.stack([binary_count, forward_count, backward_count, typeraise_count], 1),
+            columns=["binary combinators", "forward", "backward", "typeraise"],
+        )
+        logger.info(f"writing to {OUTPUT_PATH}")
         df.to_csv(OUTPUT_PATH, index=False)
 
     @staticmethod
-    def make_data_frame(trees: List[Tree]):
+    def make_data_frame(trees: list[Tree]):
         self = CombinatorCount()
-        logger.info('traverse trees')
+        logger.info("traverse trees")
         for tree in tqdm(trees):
             self.traverse(tree)
 
-        stack = ['<lex>']
+        stack = ["<lex>"]
         output_list = []
-        logger.info('make combinators correspond to each terminal')
+        logger.info("make combinators correspond to each terminal")
         for i in tqdm(self.combinator_list):
-            if i == '<lex>':
+            if i == "<lex>":
                 output_list.append(stack)
-                stack = ['<lex>']
+                stack = ["<lex>"]
             else:
                 stack.append(i)
         output_list.append(stack)
@@ -175,38 +201,48 @@ class CombinatorCount(object):
         forward_count = []
         backward_count = []
         typeraise_count = []
-        logger.info('count binary combinators')
+        logger.info("count binary combinators")
         for i in tqdm(output_list):
-            binary_count.append(i.count('>')
-                                + i.count('<')
-                                + i.count('>B')
-                                + i.count('<B1')
-                                + i.count('<B2')
-                                + i.count('<B3')
-                                + i.count('<B4')
-                                + i.count('>Bx1')
-                                + i.count('>Bx2')
-                                + i.count('>Bx3')
-                                + i.count('>B2')
-                                + i.count('SSEQ'))
-            forward_count.append(i.count('>')
-                                + i.count('>B')
-                                + i.count('>Bx1')
-                                + i.count('>Bx2')
-                                + i.count('>Bx3')
-                                + i.count('>B2'))
-            backward_count.append(i.count('<')
-                                + i.count('<B1')
-                                + i.count('<B2')
-                                + i.count('<B3')
-                                + i.count('<B4'))
-            typeraise_count.append(i.count('>T'))
+            binary_count.append(
+                i.count(">")
+                + i.count("<")
+                + i.count(">B")
+                + i.count("<B1")
+                + i.count("<B2")
+                + i.count("<B3")
+                + i.count("<B4")
+                + i.count(">Bx1")
+                + i.count(">Bx2")
+                + i.count(">Bx3")
+                + i.count(">B2")
+                + i.count("SSEQ")
+            )
+            forward_count.append(
+                i.count(">")
+                + i.count(">B")
+                + i.count(">Bx1")
+                + i.count(">Bx2")
+                + i.count(">Bx3")
+                + i.count(">B2")
+            )
+            backward_count.append(
+                i.count("<")
+                + i.count("<B1")
+                + i.count("<B2")
+                + i.count("<B3")
+                + i.count("<B4")
+            )
+            typeraise_count.append(i.count(">T"))
         binary_count = np.array(binary_count)
         forward_count = np.array(forward_count)
         backward_count = np.array(backward_count)
         typeraise_count = np.array(typeraise_count)
-        df = pd.DataFrame(np.stack([binary_count,forward_count, backward_count, typeraise_count],1), columns=['binary combinators', 'forward', 'backward', 'typeraise'])
+        df = pd.DataFrame(
+            np.stack([binary_count, forward_count, backward_count, typeraise_count], 1),
+            columns=["binary combinators", "forward", "backward", "typeraise"],
+        )
         return df
+
 
 # In contrast to Stanojevic et al. (2021; 2022), the operation, Rotate-to-right, will happen when it is necessary.
 # That is, when the unary rules, ADNint or ADNext, is applied, as follows;
@@ -238,12 +274,14 @@ class CombinatorCount(object):
 #   (1) there is at least one binary composition under ADN, and
 #   (2) the ADN constituent is not the end of a sentence.
 
+
 def most_left_cat(cat: Category) -> str:
     s = str(cat)
-    if re.match(r'\(*S', s) is not None:
-        return 'S'
+    if re.match(r"\(*S", s) is not None:
+        return "S"
     else:
-        return 'NP'
+        return "NP"
+
 
 def can_combine(l: str, r: str) -> bool:
     l = Category.parse(l)
@@ -252,7 +290,7 @@ def can_combine(l: str, r: str) -> bool:
         return False
     else:
         match l.slash:
-            case '/':
+            case "/":
                 if l.right.is_atomic:
                     return str(l.right) == most_left_cat(r)
                 else:
@@ -260,14 +298,15 @@ def can_combine(l: str, r: str) -> bool:
                         return l.right == r
                     else:
                         return l.right == r.left
-            case '\\':
+            case "\\":
                 if r.is_atomic:
                     return False
                 else:
-                    if r.slash == '/':
+                    if r.slash == "/":
                         return False
                     else:
                         return l.left == r.right
+
 
 class RevealCombinatorCount(object):
     def __init__(self):
@@ -289,7 +328,7 @@ class RevealCombinatorCount(object):
                 self.bu_category_list.append(str(node.cat))
         else:
             self.bu_combinator_list.append(node.op_symbol)
-            self.bu_category_list.append('terminal')
+            self.bu_category_list.append("terminal")
             self.bu_category_list.append(str(node.cat))
 
     def topdown_traverse(self, node: Tree) -> None:
@@ -305,7 +344,7 @@ class RevealCombinatorCount(object):
             self.td_combinator_list.append(node.op_symbol)
 
     @staticmethod
-    def make_data_frame(trees: List[Tree]):
+    def make_data_frame(trees: list[Tree]):
         reveal_counts = []
         rotation_counts = []
         for tree in tqdm(trees):
@@ -347,48 +386,59 @@ class RevealCombinatorCount(object):
             td_combinator_list.pop()
 
             # remove some 'ADNint's from bu_combinator_list
-            reveal_count = [0]*len(bu_combinator_list)
-            rotation_count = [0]*len(bu_combinator_list)
-            if 'ADNint' in td_combinator_list[0]:
-                adn_count = td_combinator_list[0].count('ADNint')
+            reveal_count = [0] * len(bu_combinator_list)
+            rotation_count = [0] * len(bu_combinator_list)
+            if "ADNint" in td_combinator_list[0]:
+                adn_count = td_combinator_list[0].count("ADNint")
                 counter = 0
                 while counter != adn_count:
                     for combinators in bu_combinator_list:
-                        if 'ADNint' in combinators:
-                            c_count = combinators.count('ADNint')
-                            if c_count <= adn_count-counter:
+                        if "ADNint" in combinators:
+                            c_count = combinators.count("ADNint")
+                            if c_count <= adn_count - counter:
                                 for i in range(c_count):
-                                    combinators.remove('ADNint')
+                                    combinators.remove("ADNint")
                                 counter += c_count
                             else:
-                                while adn_count-counter != 0:
-                                    combinators.remove('ADNint')
+                                while adn_count - counter != 0:
+                                    combinators.remove("ADNint")
                                     counter += 1
 
             for pointer, bu_combinators in enumerate(bu_combinator_list[2:], 2):
-                if 'ADNint' in td_combinator_list[pointer]:  # The left-edge of an ADN constituent is added 1 to.
+                if (
+                    "ADNint" in td_combinator_list[pointer]
+                ):  # The left-edge of an ADN constituent is added 1 to.
                     if len(bu_combinators) == 0:
-                        if can_combine(bu_category_list[pointer-1][-1], bu_category_list[pointer][-1]):
+                        if can_combine(
+                            bu_category_list[pointer - 1][-1],
+                            bu_category_list[pointer][-1],
+                        ):
                             reveal_count[pointer] += 1
                             subtracted = 0
-                            for index, elements in enumerate(bu_combinator_list[pointer:], pointer):
+                            for index, elements in enumerate(
+                                bu_combinator_list[pointer:], pointer
+                            ):
                                 if subtracted == 0:
-                                    if 'ADNint' in elements:
+                                    if "ADNint" in elements:
                                         reveal_count[index] -= 1
                                         rotation_count[index] += 1
                                         subtracted += 1
                     elif len(bu_combinators) == 1:
-                        if bu_combinators.count('>T') == 1:
-                            if can_combine(bu_category_list[pointer-1][-1], bu_category_list[pointer][-1]):
+                        if bu_combinators.count(">T") == 1:
+                            if can_combine(
+                                bu_category_list[pointer - 1][-1],
+                                bu_category_list[pointer][-1],
+                            ):
                                 reveal_count[pointer] += 1
                                 subtracted = 0
-                                for index, elements in enumerate(bu_combinator_list[pointer:], pointer):
+                                for index, elements in enumerate(
+                                    bu_combinator_list[pointer:], pointer
+                                ):
                                     if subtracted == 0:
-                                        if 'ADNint' in elements:
+                                        if "ADNint" in elements:
                                             reveal_count[index] -= 1
                                             rotation_count[index] += 1
                                             subtracted += 1
-
 
                 # if 'ADNint' in bu_combinators:
                 #     if ('>' in bu_combinators
@@ -420,20 +470,23 @@ class RevealCombinatorCount(object):
             rotation_list += count
         reveal_list = np.array(reveal_list, dtype=np.int64)
         rotation_list = np.array(rotation_list, dtype=np.int64)
-        df = pd.DataFrame(np.stack([reveal_list, rotation_list],1), columns=["reveal", "rotation"])
+        df = pd.DataFrame(
+            np.stack([reveal_list, rotation_list], 1), columns=["reveal", "rotation"]
+        )
         return df
+
 
 # Open Node Count of bottom-up traversal, following Nelson et al. (2017)?
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('FILE',
-                        type=Path,
-                        help='path to the input text file of parsed tree')
+    parser.add_argument(
+        "FILE", type=Path, help="path to the input text file of parsed tree"
+    )
 
     args = parser.parse_args()
     parent = str(Path(args.FILE).parent)
     file = str(Path(args.FILE).stem)
-    OUTPUT_PATH = parent + '/' + file + '_combinators.csv'
+    OUTPUT_PATH = parent + "/" + file + "_combinators.csv"
     trees = [tree for _, _, tree in read_parsedtree(args.FILE)]
     CombinatorCount.make_csv(trees, OUTPUT_PATH)

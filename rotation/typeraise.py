@@ -1,15 +1,14 @@
 import argparse
 from pathlib import Path
+
+from clear_features import clear_features
+from parsed_reader import read_parsedtree
 from tqdm import tqdm
 
 from depccg.cat import Category, Functor
+from depccg.printer.ja import ja_of
 from depccg.tree import Tree
 from depccg.unification import Unification
-from depccg.printer.ja import ja_of
-
-from parsed_reader import read_parsedtree
-from clear_features import clear_features
-
 
 # Type-Raising is applied to the left-side category combined by backward application, such as
 #     1. NPs combined with verbal phrases
@@ -44,13 +43,12 @@ from clear_features import clear_features
 def typeraise(l: Category, r: Functor) -> Functor:
     l = clear_features(l)
     r = clear_features(r)
-    return Functor(r.left, '/', Functor(r.left, '\\', l))
+    return Functor(r.left, "/", Functor(r.left, "\\", l))
 
 
 class TypeRaise(object):
     def __init__(self, filepath: str) -> None:
         self.filepath = filepath
-
 
     @staticmethod
     def apply_typeraise(tree: Tree) -> Tree:
@@ -58,53 +56,66 @@ class TypeRaise(object):
             if node.is_leaf:
                 return Tree.make_terminal(node.token, node.cat)
             elif node.is_unary:
-                return Tree.make_unary(node.cat,
-                                    _apply_typeraise(node.child),
-                                    node.op_string, node.op_symbol)
-            elif node.op_symbol == '<':
+                return Tree.make_unary(
+                    node.cat,
+                    _apply_typeraise(node.child),
+                    node.op_string,
+                    node.op_symbol,
+                )
+            elif node.op_symbol == "<":
                 uni = Unification("a", "b\a")
                 if uni(node.left_child.cat, node.right_child.cat):
-                    return Tree.make_binary(node.cat,
-                                            Tree.make_unary(typeraise(node.left_child.cat, node.right_child.cat),
-                                                            _apply_typeraise(node.left_child),
-                                                            'tr',
-                                                            '>T'),
-                                            _apply_typeraise(node.right_child),
-                                            'fa',
-                                            '>')
+                    return Tree.make_binary(
+                        node.cat,
+                        Tree.make_unary(
+                            typeraise(node.left_child.cat, node.right_child.cat),
+                            _apply_typeraise(node.left_child),
+                            "tr",
+                            ">T",
+                        ),
+                        _apply_typeraise(node.right_child),
+                        "fa",
+                        ">",
+                    )
                 else:
-                    return Tree.make_binary(node.cat,
-                                            _apply_typeraise(node.left_child),
-                                            _apply_typeraise(node.right_child),
-                                            node.op_string,
-                                            node.op_symbol)
+                    return Tree.make_binary(
+                        node.cat,
+                        _apply_typeraise(node.left_child),
+                        _apply_typeraise(node.right_child),
+                        node.op_string,
+                        node.op_symbol,
+                    )
             else:
-                return Tree.make_binary(node.cat,
-                                        _apply_typeraise(node.left_child),
-                                        _apply_typeraise(node.right_child),
-                                        node.op_string,
-                                        node.op_symbol)
-        return _apply_typeraise(tree)
+                return Tree.make_binary(
+                    node.cat,
+                    _apply_typeraise(node.left_child),
+                    _apply_typeraise(node.right_child),
+                    node.op_string,
+                    node.op_symbol,
+                )
 
+        return _apply_typeraise(tree)
 
     @staticmethod
     def create_typeraised_tree(args):
         self = TypeRaise(args.PATH)
 
-        OUTPUT_PATH = Path(self.filepath).parent / 'typeraised.txt'
+        OUTPUT_PATH = Path(self.filepath).parent / "typeraised.txt"
         trees = [tree for _, _, tree in tqdm(read_parsedtree(self.filepath))]
-        with open(OUTPUT_PATH, 'w') as f:
+        with open(OUTPUT_PATH, "w") as f:
             for tree in tqdm(trees):
                 tree = self.apply_typeraise(tree)
                 f.write(ja_of(tree))
-                f.write('\n')
+                f.write("\n")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('PATH',
-                        type=Path,
-                        help='path to the file of the Japanese CCG derivations parsed by depccg')
+    parser.add_argument(
+        "PATH",
+        type=Path,
+        help="path to the file of the Japanese CCG derivations parsed by depccg",
+    )
 
     args = parser.parse_args()
     TypeRaise.create_typeraised_tree(args)
